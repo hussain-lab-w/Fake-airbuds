@@ -7,18 +7,85 @@ struct ContentView: View {
     @EnvironmentObject private var player: AudioPlayer
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
+    @State private var selectedTab: AppTab = .player
 
     private let speedPresets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
+    private enum AppTab: Hashable {
+        case player
+        case library
+        case sound
+    }
+
     var body: some View {
+        TabView(selection: $selectedTab) {
+            playerTab
+            libraryTab
+            soundTab
+        }
+        .tint(Color(red: 0.38, green: 0.78, blue: 1))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if player.currentItem != nil {
+                miniPlayer
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+                    .background(.clear)
+            }
+        }
+        .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
+        .onChange(of: player.elapsed) { _, value in
+            if !isScrubbing { scrubValue = value }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var playerTab: some View {
         NavigationStack {
-            List {
-                playerSection
-                eqSection
-                AudioEffectsSection(player: player)
+            appList { playerSection }
+                .navigationTitle("Now Playing")
+                .navigationBarTitleDisplayMode(.inline)
+        }
+        .tabItem { Label("Player", systemImage: "waveform") }
+        .tag(AppTab.player)
+    }
+
+    private var libraryTab: some View {
+        NavigationStack {
+            appList {
                 allSongsSection
                 playlistsSection
             }
+            .navigationTitle("Library")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { Task { await library.requestAccessAndLoad() } } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .accessibilityLabel("Refresh")
+                }
+            }
+        }
+        .tabItem { Label("Library", systemImage: "music.note.list") }
+        .tag(AppTab.library)
+    }
+
+    private var soundTab: some View {
+        NavigationStack {
+            appList {
+                eqSection
+                AudioEffectsSection(player: player)
+            }
+            .navigationTitle("Sound")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .tabItem { Label("Sound", systemImage: "slider.horizontal.3") }
+        .tag(AppTab.sound)
+    }
+
+    private func appList<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        List { content() }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background {
@@ -31,22 +98,70 @@ struct ContentView: View {
             .listRowBackground(Color.white.opacity(0.045))
             .listRowSeparatorTint(Color.white.opacity(0.08))
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
-            .navigationTitle("EW27 Player")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(Color(red: 0.035, green: 0.055, blue: 0.12), for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Refresh") { Task { await library.requestAccessAndLoad() } }
+    }
+
+    private var miniPlayer: some View {
+        HStack(spacing: 12) {
+            Group {
+                if let artwork = player.currentItem?.artwork?.image(at: CGSize(width: 96, height: 96)) {
+                    Image(uiImage: artwork).resizable().scaledToFill()
+                } else {
+                    ZStack {
+                        LinearGradient(colors: [.cyan.opacity(0.8), .blue.opacity(0.55), .purple.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        Image(systemName: "waveform").font(.system(size: 18, weight: .semibold)).foregroundStyle(.white)
+                    }
                 }
             }
+            .frame(width: 42, height: 42)
+            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(player.currentItem?.title ?? "No track selected")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                Text(player.currentItem?.artist ?? "EW27 Player")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 4)
+            Button { player.togglePlayPause() } label: {
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(.cyan.opacity(0.18)))
+                    .foregroundStyle(.cyan)
+            }
+            .buttonStyle(.plain)
+            Button { player.nextTrack() } label: {
+                Image(systemName: "forward.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(width: 32, height: 38)
+            }
+            .buttonStyle(.plain)
         }
-        .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
-        .onChange(of: player.elapsed) { _, value in
-            if !isScrubbing { scrubValue = value }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+        .overlay(alignment: .bottom) {
+            GeometryReader { proxy in
+                let progress = player.duration > 0 ? CGFloat(min(1, max(0, player.elapsed / player.duration))) : 0
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.10))
+                    Capsule()
+                        .fill(LinearGradient(colors: [.cyan, .blue], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: proxy.size.width * progress)
+                }
+            }
+            .frame(height: 2)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 6)
         }
-        .preferredColorScheme(.dark)
+        .shadow(color: .black.opacity(0.32), radius: 14, y: 7)
     }
 
     private var playerSection: some View {
@@ -201,31 +316,74 @@ struct ContentView: View {
     }
 
     private var eqSection: some View {
-        Section("Equalizer") {
-            Picker("Preset", selection: Binding(get: { player.selectedPreset }, set: { player.applyPreset($0) })) {
-                ForEach(AudioPlayer.Preset.allCases) { preset in
-                    Text(preset.rawValue).tag(preset)
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Label("Preset", systemImage: "slider.horizontal.3")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Picker("Preset", selection: Binding(get: { player.selectedPreset }, set: { player.applyPreset($0) })) {
+                        ForEach(AudioPlayer.Preset.allCases) { preset in
+                            Text(preset.rawValue).tag(preset)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.cyan)
                 }
-            }
-            .pickerStyle(.menu)
 
-            eqSlider(index: 0, title: "60 Hz")
-            eqSlider(index: 1, title: "250 Hz")
-            eqSlider(index: 2, title: "1 kHz")
-            eqSlider(index: 3, title: "4 kHz")
-            eqSlider(index: 4, title: "12 kHz")
-            eqSlider(title: "Preamp", value: Binding(get: { player.preamp }, set: { player.setPreamp($0) }))
+                Divider().overlay(.white.opacity(0.08))
 
-            Button("Reset to Flat") { player.resetEQ() }
+                eqSlider(index: 0, title: "60 Hz")
+                eqSlider(index: 1, title: "250 Hz")
+                eqSlider(index: 2, title: "1 kHz")
+                eqSlider(index: 3, title: "4 kHz")
+                eqSlider(index: 4, title: "12 kHz")
+                eqSlider(title: "Preamp", value: Binding(get: { player.preamp }, set: { player.setPreamp($0) }))
+
+                Button { player.resetEQ() } label: {
+                    Label("Reset to Flat", systemImage: "arrow.counterclockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
                 .buttonStyle(.bordered)
+                .tint(.cyan)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(colors: [Color(red: 0.10, green: 0.15, blue: 0.27), Color(red: 0.09, green: 0.10, blue: 0.21)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
+            .shadow(color: .black.opacity(0.20), radius: 14, y: 7)
+            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
+            .listRowBackground(Color.clear)
+        } header: {
+            Label("Equalizer", systemImage: "waveform.path.ecg")
+                .font(.caption.weight(.bold))
+                .tracking(1)
+                .foregroundStyle(.cyan)
+                .textCase(nil)
         }
     }
 
     private var allSongsSection: some View {
         Section("All Local Songs") {
             if library.allSongs.isEmpty {
-                Text(library.message ?? "No local songs.")
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 12) {
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 30, weight: .medium))
+                        .foregroundStyle(.cyan)
+                        .frame(width: 64, height: 64)
+                        .background(Circle().fill(.cyan.opacity(0.12)))
+                    Text(library.message ?? "No local songs.")
+                        .font(.subheadline.weight(.medium))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 28)
+                .listRowBackground(Color.clear)
             } else {
                 ForEach(library.allSongs, id: \.persistentID) { item in
                     trackRow(item, queue: library.playableItems(library.allSongs))
@@ -237,8 +395,18 @@ struct ContentView: View {
     private var playlistsSection: some View {
         Section("Playlists") {
             if library.playlists.isEmpty {
-                Text("No local playlists, or permission not granted.")
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 12) {
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 27, weight: .medium))
+                        .foregroundStyle(.cyan)
+                    Text("No local playlists, or permission not granted.")
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+                .listRowBackground(Color.clear)
             } else {
                 ForEach(library.playlists, id: \.persistentID) { playlist in
                     DisclosureGroup(
@@ -260,30 +428,44 @@ struct ContentView: View {
     }
 
     private func trackRow(_ item: MPMediaItem, queue: [MPMediaItem]) -> some View {
+        let isCurrent = player.currentItem?.persistentID == item.persistentID
         Button {
             if item.assetURL != nil { player.play(item, queue: queue) }
         } label: {
-            HStack {
-                Image(systemName: player.currentItem?.persistentID == item.persistentID ? "waveform" : "music.note")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(player.currentItem?.persistentID == item.persistentID ? .cyan : .white.opacity(0.68))
-                    .frame(width: 38, height: 38)
-                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.07)))
+            HStack(spacing: 12) {
+                Group {
+                    if let artwork = item.artwork?.image(at: CGSize(width: 120, height: 120)) {
+                        Image(uiImage: artwork).resizable().scaledToFill()
+                    } else {
+                        ZStack {
+                            LinearGradient(colors: [.cyan.opacity(0.52), .indigo.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            Image(systemName: isCurrent ? "waveform" : "music.note")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.9))
+                        }
+                    }
+                }
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(.white.opacity(0.1), lineWidth: 1))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title ?? "Untitled")
-                        .font(.subheadline.weight(.medium))
+                        .font(.subheadline.weight(isCurrent ? .semibold : .medium))
+                        .foregroundStyle(isCurrent ? .cyan : .primary)
                     Text(item.artist ?? "")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 if item.assetURL == nil {
-                    Image(systemName: "lock.fill").foregroundStyle(.secondary)
-                } else if player.currentItem?.persistentID == item.persistentID {
-                    Image(systemName: "speaker.wave.2.fill")
+                    Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary)
+                } else if isCurrent {
+                    Image(systemName: "waveform").font(.caption.weight(.bold)).foregroundStyle(.cyan)
                 }
             }
+            .padding(.vertical, 4)
         }
+        .buttonStyle(.plain)
         .disabled(item.assetURL == nil)
     }
 

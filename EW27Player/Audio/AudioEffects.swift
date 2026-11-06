@@ -231,55 +231,137 @@ struct AudioEffectsSection: View {
 
     var body: some View {
         Section {
-            Picker("Reverb", selection: Binding(get: { player.reverbMode }, set: { player.setReverb(mode: $0) })) {
-                Text("Off").tag("Off")
-                Text("Room").tag("Room")
-                Text("Hall").tag("Hall")
-                Text("Cathedral").tag("Cathedral")
-            }
-            Slider(value: Binding(get: { Double(player.reverbWet) }, set: { player.setReverbWet(Float($0)) }), in: 0...100)
-                .tint(.cyan)
-            Button("Slowed + Reverb") { player.applySlowedReverbPreset() }
-                .buttonStyle(.borderedProminent)
-            Toggle("8D Auto-pan", isOn: Binding(get: { player.eightDEnabled }, set: { player.setEightD(enabled: $0) }))
-                .tint(.cyan)
-            HStack {
-                Text("8D speed")
-                Slider(value: Binding(get: { player.eightDSpeed }, set: { player.setEightDSpeed($0) }), in: 0.03...1.5)
-                    .tint(.cyan)
-            }
-            Picker("Sleep timer", selection: $sleepMinutes) {
-                Text("Off").tag(0)
-                Text("15 min").tag(15)
-                Text("30 min").tag(30)
-                Text("60 min").tag(60)
-            }
-            .onChange(of: sleepMinutes) { _, value in player.startSleepTimer(minutes: value) }
-            if let remaining = player.sleepRemaining {
-                Text(String(format: "Sleep in %.0f sec", remaining)).font(.caption)
-            }
-            HStack {
-                Text("Crossfade")
-                Slider(value: Binding(get: { player.crossfadeSeconds }, set: { player.setCrossfade($0) }), in: 0...12)
-                Text(String(format: "%.0fs", player.crossfadeSeconds)).font(.caption.monospacedDigit())
-            }
-            .tint(.cyan)
-            HStack {
-                Button("A: mark") { player.setLoopA() }
-                Button("B: mark") { player.setLoopB() }
-                Button("Clear A-B") { player.clearABLoop() }
-            }
-            HStack {
-                TextField("Preset name", text: $presetName)
-                Button("Save") { player.saveEffectPreset(named: presetName); presetName = "" }
-            }
-            ForEach(player.customEffectPresets) { preset in
+            VStack(alignment: .leading, spacing: 18) {
                 HStack {
-                    Button(preset.name) { player.applyEffectPreset(named: preset.name) }
+                    Label("Reverb", systemImage: "waveform.path")
+                        .font(.subheadline.weight(.semibold))
                     Spacer()
-                    Button("Delete", role: .destructive) { player.deleteEffectPreset(named: preset.name) }
+                    Picker("Reverb", selection: Binding(get: { player.reverbMode }, set: { player.setReverb(mode: $0) })) {
+                        Text("Off").tag("Off")
+                        Text("Room").tag("Room")
+                        Text("Hall").tag("Hall")
+                        Text("Cathedral").tag("Cathedral")
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .tint(.cyan)
+                }
+                VStack(spacing: 5) {
+                    HStack {
+                        Text("Wet level")
+                        Spacer()
+                        Text(String(format: "%.0f%%", player.reverbWet))
+                            .font(.caption.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(.cyan)
+                    }
+                    Slider(value: Binding(get: { Double(player.reverbWet) }, set: { player.setReverbWet(Float($0)) }), in: 0...100)
+                        .tint(.cyan)
+                }
+                Button { player.applySlowedReverbPreset() } label: {
+                    Label("Slowed + Reverb", systemImage: "sparkles")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Divider().overlay(.white.opacity(0.08))
+
+                Toggle(isOn: Binding(get: { player.eightDEnabled }, set: { player.setEightD(enabled: $0) })) {
+                    Label("8D Auto-pan", systemImage: "arrow.left.and.right.circle")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .tint(.cyan)
+                VStack(spacing: 5) {
+                    HStack {
+                        Text("Pan speed")
+                        Spacer()
+                        Text(String(format: "%.2f×", player.eightDSpeed))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: Binding(get: { player.eightDSpeed }, set: { player.setEightDSpeed($0) }), in: 0.03...1.5)
+                        .tint(.cyan)
+                }
+
+                Divider().overlay(.white.opacity(0.08))
+
+                HStack {
+                    Label("Sleep timer", systemImage: "moon.zzz")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Picker("Sleep timer", selection: $sleepMinutes) {
+                        Text("Off").tag(0)
+                        Text("15 min").tag(15)
+                        Text("30 min").tag(30)
+                        Text("60 min").tag(60)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .tint(.cyan)
+                    .onChange(of: sleepMinutes) { _, value in player.startSleepTimer(minutes: value) }
+                }
+                if let remaining = player.sleepRemaining {
+                    Label(String(format: "Sleep in %.0f sec", remaining), systemImage: "timer")
+                        .font(.caption)
+                        .foregroundStyle(.cyan)
+                }
+                VStack(spacing: 5) {
+                    HStack {
+                        Label("Crossfade", systemImage: "arrow.left.arrow.right")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(String(format: "%.0fs", player.crossfadeSeconds))
+                            .font(.caption.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(.cyan)
+                    }
+                    Slider(value: Binding(get: { player.crossfadeSeconds }, set: { player.setCrossfade($0) }), in: 0...12)
+                        .tint(.cyan)
+                }
+
+                HStack(spacing: 8) {
+                    Button("A: mark") { player.setLoopA() }
+                    Button("B: mark") { player.setLoopB() }
+                    Button("Clear A-B") { player.clearABLoop() }
+                }
+                .buttonStyle(.bordered)
+                .tint(.cyan)
+
+                Divider().overlay(.white.opacity(0.08))
+
+                HStack(spacing: 10) {
+                    TextField("Preset name", text: $presetName)
+                        .textFieldStyle(.roundedBorder)
+                    Button { player.saveEffectPreset(named: presetName); presetName = "" } label: {
+                        Image(systemName: "plus")
+                            .font(.headline.weight(.bold))
+                            .frame(width: 38, height: 38)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityLabel("Save preset")
+                }
+                ForEach(player.customEffectPresets) { preset in
+                    HStack {
+                        Button { player.applyEffectPreset(named: preset.name) } label: {
+                            Label(preset.name, systemImage: "slider.horizontal.3")
+                                .font(.subheadline.weight(.medium))
+                        }
+                        Spacer()
+                        Button("Delete", role: .destructive) { player.deleteEffectPreset(named: preset.name) }
+                            .font(.caption.weight(.medium))
+                    }
                 }
             }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(colors: [Color(red: 0.10, green: 0.15, blue: 0.27), Color(red: 0.09, green: 0.10, blue: 0.21)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
+            .shadow(color: .black.opacity(0.20), radius: 14, y: 7)
+            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
+            .listRowBackground(Color.clear)
         } header: {
             Label("Effects & Playback", systemImage: "slider.horizontal.3")
                 .font(.headline.weight(.semibold))
