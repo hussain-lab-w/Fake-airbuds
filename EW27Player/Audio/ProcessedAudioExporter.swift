@@ -55,7 +55,7 @@ enum ProcessedAudioExporter {
         let output = try await AVAudioFile(forWriting: outputURL, settings: outputSettings)
         try engine.enableManualRenderingMode(.offline, format: input.processingFormat, maximumFrameCount: 4096)
         player.scheduleFile(input, at: nil)
-        try engine.start()
+        try await engine.start()
         player.play()
         let totalFrames = AVAudioFramePosition(Double(input.length) / Double(max(speed, 0.25)))
         let buffer = AVAudioPCMBuffer(pcmFormat: engine.manualRenderingFormat, frameCapacity: engine.manualRenderingMaximumFrameCount)!
