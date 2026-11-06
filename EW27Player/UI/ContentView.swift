@@ -21,7 +21,7 @@ struct ContentView: View {
             .navigationTitle("EW27 Player")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("تحديث") { Task { await library.requestAccessAndLoad() } }
+                    Button("Refresh") { Task { await library.requestAccessAndLoad() } }
                 }
             }
         }
@@ -32,8 +32,8 @@ struct ContentView: View {
     }
 
     private var playerSection: some View {
-        Section("المشغل") {
-            Text(player.currentItem?.title ?? "لم يتم اختيار أغنية")
+        Section("Player") {
+            Text(player.currentItem?.title ?? "No track selected")
                 .font(.headline)
             Text(player.currentItem?.artist ?? "")
                 .font(.caption)
@@ -65,7 +65,7 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("السرعة")
+                    Text("Speed")
                     Spacer()
                     Text(String(format: "%.2fx", player.speed)).font(.caption.monospacedDigit())
                 }
@@ -79,22 +79,22 @@ struct ContentView: View {
                 }
                 Slider(value: Binding(get: { Double(player.speed) }, set: { player.setSpeed(Float($0)) }), in: 0.25...4)
             }
-            Toggle("Keep pitch / إبقاء النغمة", isOn: $player.keepPitch)
+            Toggle("Keep pitch", isOn: $player.keepPitch)
                 .onChange(of: player.keepPitch) { _, _ in player.setSpeed(player.speed) }
 
-            Toggle("تشغيل عشوائي", isOn: $player.shuffleEnabled)
-            LabeledContent("المسار", value: player.routeName)
+            Toggle("Shuffle", isOn: $player.shuffleEnabled)
+            LabeledContent("Output", value: player.routeName)
             if let message = player.playbackMessage {
                 Text(message).font(.caption).foregroundStyle(.red)
             }
-            Text("إذا انتهت الأغنية، اضغط تشغيل لإعادة تشغيلها أو استخدم التالي للانتقال.")
+            Text("When a track ends, press play to restart it or use Next.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
 
     private var eqSection: some View {
-        Section("المعادل الصوتي") {
+        Section("Equalizer") {
             Picker("Preset", selection: Binding(get: { player.selectedPreset }, set: { player.applyPreset($0) })) {
                 ForEach(AudioPlayer.Preset.allCases) { preset in
                     Text(preset.rawValue).tag(preset)
@@ -109,15 +109,15 @@ struct ContentView: View {
             eqSlider(index: 4, title: "12 kHz")
             eqSlider(title: "Preamp", value: Binding(get: { player.preamp }, set: { player.setPreamp($0) }))
 
-            Button("إرجاع Flat") { player.resetEQ() }
+            Button("Reset to Flat") { player.resetEQ() }
                 .buttonStyle(.bordered)
         }
     }
 
     private var allSongsSection: some View {
-        Section("كل الأغاني المحلية") {
+        Section("All Local Songs") {
             if library.allSongs.isEmpty {
-                Text(library.message ?? "لا توجد أغاني محلية.")
+                Text(library.message ?? "No local songs.")
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(library.allSongs, id: \.persistentID) { item in
@@ -128,9 +128,9 @@ struct ContentView: View {
     }
 
     private var playlistsSection: some View {
-        Section("قوائم التشغيل") {
+        Section("Playlists") {
             if library.playlists.isEmpty {
-                Text("لا توجد قوائم تشغيل محلية أو لم تُمنح الصلاحية.")
+                Text("No local playlists, or permission not granted.")
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(library.playlists, id: \.persistentID) { playlist in
@@ -145,7 +145,7 @@ struct ContentView: View {
                             trackRow(item, queue: library.playableItems(items))
                         }
                     } label: {
-                        Text(playlist.value(forProperty: MPMediaPlaylistPropertyName) as? String ?? "قائمة تشغيل")
+                        Text(playlist.value(forProperty: MPMediaPlaylistPropertyName) as? String ?? "Playlist")
                     }
                 }
             }
@@ -158,7 +158,7 @@ struct ContentView: View {
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title ?? "بدون عنوان")
+                    Text(item.title ?? "Untitled")
                     Text(item.artist ?? "")
                         .font(.caption)
                         .foregroundStyle(.secondary)

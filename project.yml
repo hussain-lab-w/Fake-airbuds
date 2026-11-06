@@ -20,7 +20,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         INFOPLIST_KEY_CFBundleDisplayName: "EW27 Player"
         INFOPLIST_KEY_LSRequiresIPhoneOS: YES
-        INFOPLIST_KEY_NSAppleMusicUsageDescription: "نحتاج الوصول إلى مكتبة الأغاني المحلية وقوائم التشغيل لتشغيل ملفاتك مع المعادل الصوتي."
+        INFOPLIST_KEY_NSAppleMusicUsageDescription: "Access your local music library to play your songs with the equalizer."
     info:
       path: EW27Player/Info.plist
       properties:

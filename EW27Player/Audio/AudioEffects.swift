@@ -230,7 +230,7 @@ struct AudioEffectsSection: View {
     @State private var sleepMinutes = 30
 
     var body: some View {
-        Section("المؤثرات والتشغيل") {
+        Section("Effects & Playback") {
             Picker("Reverb", selection: Binding(get: { player.reverbMode }, set: { player.setReverb(mode: $0) })) {
                 Text("Off").tag("Off")
                 Text("Room").tag("Room")

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>NSAppleMusicUsageDescription</key>
-    <string>نحتاج الوصول إلى مكتبة الأغاني المحلية وقوائم التشغيل لتشغيل ملفاتك مع المعادل الصوتي.</string>
+    <string>Access your local music library to play your songs with the equalizer.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>audio</string>

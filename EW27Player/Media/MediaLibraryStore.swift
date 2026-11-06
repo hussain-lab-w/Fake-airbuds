@@ -18,7 +18,7 @@ final class MediaLibraryStore: ObservableObject {
         let status = await MPMediaLibrary.requestAuthorization()
         authorization = status
         guard status == .authorized else {
-            message = "اسمح للتطبيق بالوصول إلى مكتبة الوسائط من Settings."
+            message = "Allow media library access in Settings."
             return
         }
 

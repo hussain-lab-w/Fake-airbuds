@@ -15,7 +15,7 @@ struct RouteAccessoryCard: View {
                         .symbolEffect(.pulse, options: .repeating)
                         .foregroundStyle(.white)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("تم الاتصال")
+                        Text("Connected")
                             .font(.headline)
                             .foregroundStyle(.white)
                         Text(displayedRoute)
@@ -34,11 +34,11 @@ struct RouteAccessoryCard: View {
             }
         }
         .onChange(of: routeName) { _, newValue in showRoute(newValue) }
-        .onAppear { if !routeName.isEmpty && routeName != "لا يوجد مسار" { showRoute(routeName) } }
+        .onAppear { if !routeName.isEmpty && routeName != AudioPlayer.noRoute { showRoute(routeName) } }
     }
 
     private func showRoute(_ name: String) {
-        guard !name.isEmpty, name != "لا يوجد مسار", name != displayedRoute else { return }
+        guard !name.isEmpty, name != AudioPlayer.noRoute, name != displayedRoute else { return }
         displayedRoute = name
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) { visible = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
@@ -49,7 +49,7 @@ struct RouteAccessoryCard: View {
         center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
             guard granted else { return }
             let content = UNMutableNotificationContent()
-            content.title = "تم الاتصال بجهاز صوتي"
+            content.title = "Connected to an audio device"
             content.body = name
             content.sound = .default
             let request = UNNotificationRequest(identifier: "ew27-route-\(UUID().uuidString)", content: content, trigger: nil)

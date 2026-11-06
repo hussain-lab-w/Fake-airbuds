@@ -4,6 +4,8 @@ import MediaPlayer
 
 @MainActor
 final class AudioPlayer: ObservableObject {
+    static let noRoute = "No output"
+
     enum Preset: String, CaseIterable, Identifiable, Codable {
         case flat = "Flat"
         case bassBoost = "Bass Boost"
@@ -23,7 +25,7 @@ final class AudioPlayer: ObservableObject {
     @Published private(set) var currentIndex = 0
     @Published private(set) var isPlaying = false
     @Published private(set) var hasFinished = false
-    @Published private(set) var routeName = "لا يوجد مسار"
+    @Published private(set) var routeName = noRoute
     @Published private(set) var elapsed: TimeInterval = 0
     @Published private(set) var duration: TimeInterval = 0
     @Published private(set) var playbackMessage: String?
@@ -67,10 +69,16 @@ final class AudioPlayer: ObservableObject {
 
     private let bandFrequencies: [Float] = [60, 250, 1000, 4000, 12000]
     private let userDefaultsKey = "ew27.eq.settings.v2"
-    private let speedDefaultsKey = "ew27.speed.byTrack.v1"
+    private let globalSpeedDefaultsKey = "ew27.speed.global.v1"
 
     init() {
         configureEQ()
+        if let storedSpeed = UserDefaults.standard.object(forKey: globalSpeedDefaultsKey) as? NSNumber {
+            speed = max(0.25, min(4, storedSpeed.floatValue))
+        } else {
+            speed = 1
+        }
+        applyPlaybackRate()
         configureAudioSession()
         configureRemoteCommands()
         installObservers()
@@ -119,7 +127,7 @@ final class AudioPlayer: ObservableObject {
 
     func play(_ item: MPMediaItem, queue newQueue: [MPMediaItem]) {
         let playable = newQueue.filter { $0.assetURL != nil }
-        guard !playable.isEmpty else { playbackMessage = "لا توجد ملفات صوتية قابلة للتشغيل."; return }
+        guard !playable.isEmpty else { playbackMessage = "No playable audio files."; return }
         queue = playable
         currentIndex = playable.firstIndex(where: { $0.persistentID == item.persistentID }) ?? 0
         failedOpenCount = 0
@@ -185,8 +193,12 @@ final class AudioPlayer: ObservableObject {
                 let eased = Float(fraction * fraction * (3 - 2 * fraction))
                 self.speed = self.rampStart + (self.rampTarget - self.rampStart) * eased
                 self.applyPlaybackRate()
-                self.saveSpeedForCurrentTrack()
-                if fraction >= 1 { timer.invalidate(); self.rampTimer = nil; self.updateNowPlaying() }
+                if fraction >= 1 {
+                    timer.invalidate()
+                    self.rampTimer = nil
+                    UserDefaults.standard.set(Double(self.speed), forKey: self.globalSpeedDefaultsKey)
+                    self.updateNowPlaying()
+                }
             }
         }
     }
@@ -250,14 +262,13 @@ final class AudioPlayer: ObservableObject {
             currentItem = item
             duration = TimeInterval(file.length) / file.processingFormat.sampleRate
             trackOffset = max(0, min(duration, startTime))
-            speed = loadSpeed(for: item)
             rebuildGraph(format: file.processingFormat)
             failedOpenCount = 0
             playbackMessage = nil
             scheduleCurrentSegment(token: token, shouldPlay: shouldPlay)
             updateNowPlaying()
         } catch {
-            playbackMessage = "تعذر فتح الأغنية؛ جارٍ تخطيها."
+            playbackMessage = "Couldn't open this track; skipping."
             isPlaying = false
             skipUnavailableTrack()
         }
@@ -275,7 +286,7 @@ final class AudioPlayer: ObservableObject {
                 self.finishTrack(token: token)
             }
         }
-        if !engine.isRunning { do { try engine.start() } catch { playbackMessage = "تعذر بدء محرك الصوت."; isPlaying = false; return } }
+        if !engine.isRunning { do { try engine.start() } catch { playbackMessage = "Couldn't start the audio engine."; isPlaying = false; return } }
         elapsed = trackOffset
         lastProgressDate = Date()
         if shouldPlay { playCurrentNode() } else { isPlaying = false; updateNowPlaying() }
@@ -308,7 +319,7 @@ final class AudioPlayer: ObservableObject {
         guard !queue.isEmpty else { isPlaying = false; hasFinished = true; return }
         failedOpenCount += 1
         guard failedOpenCount < queue.count else {
-            playbackMessage = "لم يتم العثور على أغنية قابلة للتشغيل."
+            playbackMessage = "No playable track found."
             isPlaying = false
             hasFinished = true
             return
@@ -354,7 +365,7 @@ final class AudioPlayer: ObservableObject {
     private func updateNowPlaying() {
         guard let item = currentItem else { return }
         var info: [String: Any] = [
-            MPMediaItemPropertyTitle: item.title ?? "بدون عنوان",
+            MPMediaItemPropertyTitle: item.title ?? "Untitled",
             MPMediaItemPropertyArtist: item.artist ?? "",
             MPNowPlayingInfoPropertyElapsedPlaybackTime: elapsed,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? Double(speed) : 0.0,
@@ -429,7 +440,7 @@ final class AudioPlayer: ObservableObject {
     }
 
     private func updateRouteAndLoadSettings() {
-        routeName = AVAudioSession.sharedInstance().currentRoute.outputs.first?.portName ?? "لا يوجد مسار"
+        routeName = AVAudioSession.sharedInstance().currentRoute.outputs.first?.portName ?? Self.noRoute
         loadSettingsForCurrentRoute()
     }
 
@@ -456,19 +467,6 @@ final class AudioPlayer: ObservableObject {
         var values = storedSettings()
         values[routeKey()] = EQSettings(gains: eqGains, globalGain: preamp, preset: selectedPreset)
         if let data = try? JSONEncoder().encode(values) { UserDefaults.standard.set(data, forKey: userDefaultsKey) }
-    }
-
-    private func loadSpeed(for item: MPMediaItem) -> Float {
-        let values = UserDefaults.standard.dictionary(forKey: speedDefaultsKey) as? [String: Double] ?? [:]
-        let stored = values[String(item.persistentID)] ?? 1
-        return Float(max(0.25, min(4, stored)))
-    }
-
-    private func saveSpeedForCurrentTrack() {
-        guard let item = currentItem else { return }
-        var values = UserDefaults.standard.dictionary(forKey: speedDefaultsKey) as? [String: Double] ?? [:]
-        values[String(item.persistentID)] = Double(speed)
-        UserDefaults.standard.set(values, forKey: speedDefaultsKey)
     }
 
     private func applyEQSettings() {
