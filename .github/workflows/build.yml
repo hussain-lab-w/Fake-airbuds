@@ -1,0 +1,51 @@
+name: Build EW27 Player
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build unsigned app
+        run: |
+          set -eo pipefail
+          xcodebuild \
+            -project EW27Player.xcodeproj \
+            -scheme EW27Player \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build | tee xcodebuild.log
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build/Build/Products/Release-iphoneos/EW27Player.app"
+          test -d "$APP_PATH"
+          rm -rf Payload EW27Player-unsigned.ipa
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/EW27Player.app
+          /usr/bin/zip -qry EW27Player-unsigned.ipa Payload
+          test -f EW27Player-unsigned.ipa
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: EW27Player-unsigned-ipa
+          path: EW27Player-unsigned.ipa
+          if-no-files-found: error

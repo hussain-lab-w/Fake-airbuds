@@ -1,0 +1,7 @@
+DerivedData/
+build/
+Payload/
+*.ipa
+*.xcarchive
+*.xcodeproj/xcuserdata/
+.DS_Store
