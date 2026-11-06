@@ -230,7 +230,7 @@ struct AudioEffectsSection: View {
     @State private var sleepMinutes = 30
 
     var body: some View {
-        Section("Effects & Playback") {
+        Section {
             Picker("Reverb", selection: Binding(get: { player.reverbMode }, set: { player.setReverb(mode: $0) })) {
                 Text("Off").tag("Off")
                 Text("Room").tag("Room")
@@ -238,11 +238,15 @@ struct AudioEffectsSection: View {
                 Text("Cathedral").tag("Cathedral")
             }
             Slider(value: Binding(get: { Double(player.reverbWet) }, set: { player.setReverbWet(Float($0)) }), in: 0...100)
+                .tint(.cyan)
             Button("Slowed + Reverb") { player.applySlowedReverbPreset() }
+                .buttonStyle(.borderedProminent)
             Toggle("8D Auto-pan", isOn: Binding(get: { player.eightDEnabled }, set: { player.setEightD(enabled: $0) }))
+                .tint(.cyan)
             HStack {
                 Text("8D speed")
                 Slider(value: Binding(get: { player.eightDSpeed }, set: { player.setEightDSpeed($0) }), in: 0.03...1.5)
+                    .tint(.cyan)
             }
             Picker("Sleep timer", selection: $sleepMinutes) {
                 Text("Off").tag(0)
@@ -259,6 +263,7 @@ struct AudioEffectsSection: View {
                 Slider(value: Binding(get: { player.crossfadeSeconds }, set: { player.setCrossfade($0) }), in: 0...12)
                 Text(String(format: "%.0fs", player.crossfadeSeconds)).font(.caption.monospacedDigit())
             }
+            .tint(.cyan)
             HStack {
                 Button("A: mark") { player.setLoopA() }
                 Button("B: mark") { player.setLoopB() }
@@ -275,6 +280,10 @@ struct AudioEffectsSection: View {
                     Button("Delete", role: .destructive) { player.deleteEffectPreset(named: preset.name) }
                 }
             }
+        } header: {
+            Label("Effects & Playback", systemImage: "slider.horizontal.3")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.cyan)
         }
     }
 }

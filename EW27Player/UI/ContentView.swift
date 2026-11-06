@@ -18,7 +18,23 @@ struct ContentView: View {
                 allSongsSection
                 playlistsSection
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background {
+                LinearGradient(
+                    colors: [Color(red: 0.035, green: 0.055, blue: 0.12), Color(red: 0.075, green: 0.07, blue: 0.17), Color(red: 0.025, green: 0.04, blue: 0.095)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ).ignoresSafeArea()
+            }
+            .listRowBackground(Color.white.opacity(0.045))
+            .listRowSeparatorTint(Color.white.opacity(0.08))
+            .tint(Color(red: 0.38, green: 0.78, blue: 1))
             .navigationTitle("EW27 Player")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color(red: 0.035, green: 0.055, blue: 0.12), for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Refresh") { Task { await library.requestAccessAndLoad() } }
@@ -29,27 +45,32 @@ struct ContentView: View {
         .onChange(of: player.elapsed) { _, value in
             if !isScrubbing { scrubValue = value }
         }
+        .preferredColorScheme(.dark)
     }
 
     private var playerSection: some View {
         Section("Player") {
             Text(player.currentItem?.title ?? "No track selected")
-                .font(.headline)
+                .font(.system(size: 25, weight: .bold, design: .rounded))
+                .lineLimit(1)
             Text(player.currentItem?.artist ?? "")
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             HStack {
-                Button { player.previousTrack() } label: { Image(systemName: "backward.fill") }
+                Button { player.previousTrack() } label: { Image(systemName: "backward.fill").font(.system(size: 20, weight: .semibold)) }
                 Spacer()
                 Button { player.togglePlayPause() } label: {
                     Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 38))
+                        .font(.system(size: 58, weight: .medium))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color(red: 0.42, green: 0.82, blue: 1))
                 }
                 Spacer()
-                Button { player.nextTrack() } label: { Image(systemName: "forward.fill") }
+                Button { player.nextTrack() } label: { Image(systemName: "forward.fill").font(.system(size: 20, weight: .semibold)) }
             }
             .buttonStyle(.plain)
+            .padding(.vertical, 8)
 
             Slider(value: $scrubValue, in: 0...max(1, player.duration), onEditingChanged: { editing in
                 isScrubbing = editing
@@ -62,6 +83,7 @@ struct ContentView: View {
             }
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
+            .padding(.top, -4)
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -73,16 +95,18 @@ struct ContentView: View {
                     ForEach(speedPresets, id: \.self) { value in
                         Button(String(format: "%g×", value)) { player.setSpeed(value) }
                             .font(.caption2)
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.borderedProminent)
                             .tint(abs(player.speed - value) < 0.02 ? .accentColor : .gray)
                     }
                 }
                 Slider(value: Binding(get: { Double(player.speed) }, set: { player.setSpeed(Float($0)) }), in: 0.25...4)
             }
             Toggle("Keep pitch", isOn: $player.keepPitch)
+                .tint(.cyan)
                 .onChange(of: player.keepPitch) { _, _ in player.setSpeed(player.speed) }
 
             Toggle("Shuffle", isOn: $player.shuffleEnabled)
+                .tint(.cyan)
             LabeledContent("Output", value: player.routeName)
             if let message = player.playbackMessage {
                 Text(message).font(.caption).foregroundStyle(.red)
