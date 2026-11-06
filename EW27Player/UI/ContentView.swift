@@ -4,6 +4,10 @@ import MediaPlayer
 struct ContentView: View {
     @EnvironmentObject private var library: MediaLibraryStore
     @EnvironmentObject private var player: AudioPlayer
+    @State private var scrubValue: Double = 0
+    @State private var isScrubbing = false
+
+    private let speedPresets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
     var body: some View {
         NavigationStack {
@@ -19,6 +23,9 @@ struct ContentView: View {
                     Button("تحديث") { Task { await library.requestAccessAndLoad() } }
                 }
             }
+        }
+        .onChange(of: player.elapsed) { _, value in
+            if !isScrubbing { scrubValue = value }
         }
     }
 
@@ -42,17 +49,42 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
 
-            Slider(value: Binding(get: { player.progress }, set: { player.progress = $0 }), in: 0...max(1, player.duration))
+            Slider(value: $scrubValue, in: 0...max(1, player.duration), onEditingChanged: { editing in
+                isScrubbing = editing
+                if !editing { player.seek(to: scrubValue) }
+            })
             HStack {
-                Text(formatTime(player.elapsed))
+                Text(formatTime(isScrubbing ? scrubValue : player.elapsed))
                 Spacer()
                 Text(formatTime(player.duration))
             }
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
 
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("السرعة")
+                    Spacer()
+                    Text(String(format: "%.2fx", player.speed)).font(.caption.monospacedDigit())
+                }
+                HStack(spacing: 6) {
+                    ForEach(speedPresets, id: \.self) { value in
+                        Button(String(format: "%g×", value)) { player.setSpeed(value) }
+                            .font(.caption2)
+                            .buttonStyle(.bordered)
+                            .tint(abs(player.speed - value) < 0.02 ? .accentColor : .gray)
+                    }
+                }
+                Slider(value: Binding(get: { Double(player.speed) }, set: { player.setSpeed(Float($0)) }), in: 0.25...4)
+            }
+            Toggle("Keep pitch / إبقاء النغمة", isOn: $player.keepPitch)
+                .onChange(of: player.keepPitch) { _, _ in player.setSpeed(player.speed) }
+
             Toggle("تشغيل عشوائي", isOn: $player.shuffleEnabled)
             LabeledContent("المسار", value: player.routeName)
+            if let message = player.playbackMessage {
+                Text(message).font(.caption).foregroundStyle(.red)
+            }
             Text("إذا انتهت الأغنية، اضغط تشغيل لإعادة تشغيلها أو استخدم التالي للانتقال.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -131,8 +163,7 @@ struct ContentView: View {
                 }
                 Spacer()
                 if item.assetURL == nil {
-                    Image(systemName: "lock.fill")
-                        .foregroundStyle(.secondary)
+                    Image(systemName: "lock.fill").foregroundStyle(.secondary)
                 } else if player.currentItem?.persistentID == item.persistentID {
                     Image(systemName: "speaker.wave.2.fill")
                 }
