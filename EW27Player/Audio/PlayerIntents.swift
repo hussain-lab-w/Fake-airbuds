@@ -35,7 +35,7 @@ struct ApplyEffectPresetIntent: AppIntent {
     @Parameter(title: "Preset name") var name: String
     func perform() async throws -> some IntentResult & ProvidesDialog {
         await MainActor.run { AudioPlayerIntentBridge.shared.player?.applyEffectPreset(named: name) }
-        return .result(dialog: "Preset applied: \(name).")
+        return .result(dialog: IntentDialog("Preset applied: \\(name)."))
     }
 }
 

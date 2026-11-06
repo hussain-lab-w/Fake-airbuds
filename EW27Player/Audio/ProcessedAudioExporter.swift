@@ -52,7 +52,7 @@ enum ProcessedAudioExporter {
             AVNumberOfChannelsKey: Int(input.processingFormat.channelCount),
             AVEncoderBitRateKey: 192_000
         ]
-        let output = try AVAudioFile(forWriting: outputURL, settings: outputSettings)
+        let output = try await AVAudioFile(forWriting: outputURL, settings: outputSettings)
         try engine.enableManualRenderingMode(.offline, format: input.processingFormat, maximumFrameCount: 4096)
         player.scheduleFile(input, at: nil)
         try engine.start()
