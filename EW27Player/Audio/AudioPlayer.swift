@@ -37,6 +37,7 @@ final class AudioPlayer: ObservableObject {
     let engine = AVAudioEngine()
     let playerNode = AVAudioPlayerNode()
     let fxMixer = AVAudioMixerNode()
+    let panMixer = AVAudioMixerNode()
     let varispeed = AVAudioUnitVarispeed()
     let timePitch = AVAudioUnitTimePitch()
     let eq = AVAudioUnitEQ(numberOfBands: 5)
@@ -213,12 +214,12 @@ final class AudioPlayer: ObservableObject {
     }
 
     private func attachNodesIfNeeded() {
-        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, limiter] where !engine.attachedNodes.contains(node) { engine.attach(node) }
+        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, limiter, panMixer] where !engine.attachedNodes.contains(node) { engine.attach(node) }
     }
 
     private func rebuildGraph(format: AVAudioFormat) {
         engine.stop()
-        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, limiter] where engine.attachedNodes.contains(node) { engine.disconnectNodeOutput(node) }
+        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, limiter, panMixer] where engine.attachedNodes.contains(node) { engine.disconnectNodeOutput(node) }
         attachNodesIfNeeded()
         engine.connect(playerNode, to: fxMixer, format: format)
         engine.connect(fxMixer, to: varispeed, format: format)
@@ -226,7 +227,8 @@ final class AudioPlayer: ObservableObject {
         engine.connect(timePitch, to: eq, format: format)
         engine.connect(eq, to: reverb, format: format)
         engine.connect(reverb, to: limiter, format: format)
-        engine.connect(limiter, to: engine.mainMixerNode, format: format)
+        engine.connect(limiter, to: panMixer, format: format)
+        engine.connect(panMixer, to: engine.mainMixerNode, format: format)
         applyEQSettings()
         applyPlaybackRate()
     }

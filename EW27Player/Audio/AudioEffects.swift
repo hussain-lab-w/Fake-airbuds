@@ -77,10 +77,10 @@ extension AudioPlayer {
                     guard let self else { timer.invalidate(); return }
                     let s = EffectsState.shared
                     s.phase += 2 * .pi * s.panRate / 60
-                    self.fxMixer.pan = Float(sin(s.phase))
+                    self.panMixer.pan = Float(sin(s.phase))
                 }
             }
-        } else { fxMixer.pan = 0 }
+        } else { panMixer.pan = 0 }
         objectWillChange.send()
     }
 
@@ -174,18 +174,18 @@ extension AudioPlayer {
         state.sleepTimer = nil
         state.sleepDeadline = nil
         state.fadeTimer?.invalidate()
-        let startVolume = fxMixer.outputVolume
+        let startVolume = engine.mainMixerNode.outputVolume
         let start = Date()
         state.fadeTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] timer in
             Task { @MainActor in
                 guard let self else { timer.invalidate(); return }
                 let fraction = min(1, Date().timeIntervalSince(start) / 10)
-                self.fxMixer.outputVolume = startVolume * Float(1 - fraction)
+                self.engine.mainMixerNode.outputVolume = startVolume * Float(1 - fraction)
                 if fraction >= 1 {
                     timer.invalidate()
                     state.fadeTimer = nil
                     self.pause()
-                    self.fxMixer.outputVolume = 1
+                    self.engine.mainMixerNode.outputVolume = 1
                     self.objectWillChange.send()
                 }
             }
