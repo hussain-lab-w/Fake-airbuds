@@ -4,7 +4,7 @@ import MediaPlayer
 
 @MainActor
 final class AudioPlayer: ObservableObject {
-    enum Preset: String, CaseIterable, Identifiable {
+    enum Preset: String, CaseIterable, Identifiable, Codable {
         case flat = "Flat"
         case bassBoost = "Bass Boost"
         case vocal = "Vocal"
@@ -178,7 +178,7 @@ final class AudioPlayer: ObservableObject {
     private func configureAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .music, options: [.allowBluetoothA2DP])
+            try session.setCategory(.playback, mode: .default, options: [.allowBluetoothA2DP])
             try session.setActive(true)
         } catch { }
     }
@@ -296,7 +296,7 @@ final class AudioPlayer: ObservableObject {
 
     private func updateProgress() {
         guard let nodeTime = playerNode.lastRenderTime,
-              let playerTime = playerNode.playerTime(forNode: playerNode),
+              let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
               playerTime.sampleRate > 0,
               !isSeeking else { return }
         let nodeElapsed = Double(playerTime.sampleTime) / playerTime.sampleRate
