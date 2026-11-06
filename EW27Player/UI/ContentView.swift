@@ -429,7 +429,7 @@ struct ContentView: View {
 
     private func trackRow(_ item: MPMediaItem, queue: [MPMediaItem]) -> some View {
         let isCurrent = player.currentItem?.persistentID == item.persistentID
-        Button {
+        return Button {
             if item.assetURL != nil { player.play(item, queue: queue) }
         } label: {
             HStack(spacing: 12) {
