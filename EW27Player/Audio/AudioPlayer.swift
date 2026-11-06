@@ -223,7 +223,9 @@ final class AudioPlayer: ObservableObject {
         guard queue.indices.contains(currentIndex), let url = queue[currentIndex].assetURL else { return }
         generation &+= 1
         let token = generation
-        playerNode.stop()
+        if playerNode.engine != nil {
+            playerNode.stop()
+        }
         elapsed = 0
         hasFinished = false
 
@@ -295,7 +297,10 @@ final class AudioPlayer: ObservableObject {
     }
 
     private func updateProgress() {
-        guard let nodeTime = playerNode.lastRenderTime,
+        guard engine.isRunning,
+              playerNode.engine != nil,
+              isPlaying,
+              let nodeTime = playerNode.lastRenderTime,
               let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
               playerTime.sampleRate > 0,
               !isSeeking else { return }
