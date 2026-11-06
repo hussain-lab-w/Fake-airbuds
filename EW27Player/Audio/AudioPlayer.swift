@@ -209,9 +209,15 @@ final class AudioPlayer: ObservableObject {
 
     private func rebuildGraph(format: AVAudioFormat) {
         engine.stop()
-        engine.disconnectNodeOutput(playerNode)
-        engine.disconnectNodeOutput(eq)
-        engine.disconnectNodeOutput(limiter)
+        if engine.attachedNodes.contains(playerNode) {
+            engine.disconnectNodeOutput(playerNode)
+        }
+        if engine.attachedNodes.contains(eq) {
+            engine.disconnectNodeOutput(eq)
+        }
+        if engine.attachedNodes.contains(limiter) {
+            engine.disconnectNodeOutput(limiter)
+        }
         attachNodesIfNeeded()
         engine.connect(playerNode, to: eq, format: format)
         engine.connect(eq, to: limiter, format: format)
