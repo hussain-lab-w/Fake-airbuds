@@ -36,9 +36,11 @@ final class AudioPlayer: ObservableObject {
 
     let engine = AVAudioEngine()
     let playerNode = AVAudioPlayerNode()
+    let fxMixer = AVAudioMixerNode()
     let varispeed = AVAudioUnitVarispeed()
     let timePitch = AVAudioUnitTimePitch()
     let eq = AVAudioUnitEQ(numberOfBands: 5)
+    let reverb = AVAudioUnitReverb()
     let limiter: AVAudioUnitEffect = {
         let description = AudioComponentDescription(componentType: kAudioUnitType_Effect, componentSubType: kAudioUnitSubType_PeakLimiter, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
         return AVAudioUnitEffect(audioComponentDescription: description)
@@ -161,7 +163,7 @@ final class AudioPlayer: ObservableObject {
         generation &+= 1
         let token = generation
         let resume = isPlaying
-        playerNode.stop()
+        if playerNode.engine != nil { playerNode.stop() }
         trackOffset = target
         elapsed = target
         scheduleCurrentSegment(token: token, shouldPlay: resume)
@@ -207,20 +209,23 @@ final class AudioPlayer: ObservableObject {
         }
         limiter.auAudioUnit.shouldBypassEffect = false
         timePitch.pitch = 0
+        reverb.wetDryMix = 0
     }
 
     private func attachNodesIfNeeded() {
-        for node in [playerNode as AVAudioNode, varispeed, timePitch, eq, limiter] where !engine.attachedNodes.contains(node) { engine.attach(node) }
+        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, limiter] where !engine.attachedNodes.contains(node) { engine.attach(node) }
     }
 
     private func rebuildGraph(format: AVAudioFormat) {
         engine.stop()
-        for node in [playerNode as AVAudioNode, varispeed, timePitch, eq, limiter] where engine.attachedNodes.contains(node) { engine.disconnectNodeOutput(node) }
+        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, limiter] where engine.attachedNodes.contains(node) { engine.disconnectNodeOutput(node) }
         attachNodesIfNeeded()
-        engine.connect(playerNode, to: varispeed, format: format)
+        engine.connect(playerNode, to: fxMixer, format: format)
+        engine.connect(fxMixer, to: varispeed, format: format)
         engine.connect(varispeed, to: timePitch, format: format)
         engine.connect(timePitch, to: eq, format: format)
-        engine.connect(eq, to: limiter, format: format)
+        engine.connect(eq, to: reverb, format: format)
+        engine.connect(reverb, to: limiter, format: format)
         engine.connect(limiter, to: engine.mainMixerNode, format: format)
         applyEQSettings()
         applyPlaybackRate()
@@ -232,7 +237,8 @@ final class AudioPlayer: ObservableObject {
         guard let url = item.assetURL else { skipUnavailableTrack(); return }
         generation &+= 1
         let token = generation
-        playerNode.stop()
+        if playerNode.engine != nil { playerNode.stop() }
+        fxMixer.outputVolume = crossfadeSeconds > 0 ? 0 : 1
         elapsed = 0
         hasFinished = false
         do {
@@ -327,11 +333,20 @@ final class AudioPlayer: ObservableObject {
         elapsed = min(duration, elapsed + now.timeIntervalSince(lastProgressDate) * Double(speed))
         lastProgressDate = now
         if elapsed >= duration { elapsed = duration }
+        let fadeDuration = min(crossfadeSeconds, duration / 2)
+        if fadeDuration > 0 {
+            let fadeIn = min(1, max(0, elapsed / fadeDuration))
+            let fadeOut = min(1, max(0, (duration - elapsed) / fadeDuration))
+            fxMixer.outputVolume = Float(min(fadeIn, fadeOut))
+        } else {
+            fxMixer.outputVolume = 1
+        }
     }
 
     private func applyPlaybackRate() {
-        if keepPitch { varispeed.rate = 1; timePitch.rate = max(8_000, min(192_000, 48_000 * speed)) }
-        else { varispeed.rate = speed; timePitch.rate = 48_000 }
+        let rate = max(0.25, min(4, speed))
+        if keepPitch { varispeed.rate = 1; timePitch.rate = rate }
+        else { varispeed.rate = rate; timePitch.rate = 1 }
     }
 
     private func updateNowPlaying() {

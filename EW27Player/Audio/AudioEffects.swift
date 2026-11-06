@@ -5,7 +5,6 @@ import SwiftUI
 @MainActor
 private final class EffectsState {
     static let shared = EffectsState()
-    let reverb = AVAudioUnitReverb()
     var reverbMode = "Off"
     var wet: Float = 30
     var panEnabled = false
@@ -50,26 +49,16 @@ extension AudioPlayer {
         let state = EffectsState.shared
         state.reverbMode = mode
         if let wet { state.wet = max(0, min(100, wet)) }
-        if !engine.attachedNodes.contains(state.reverb) { engine.attach(state.reverb) }
         if mode == "Off" {
-            state.reverb.loadFactoryPreset(.mediumRoom)
-            state.reverb.wetDryMix = 0
+            reverb.wetDryMix = 0
         } else {
             switch mode {
-            case "Room": state.reverb.loadFactoryPreset(.mediumRoom)
-            case "Hall": state.reverb.loadFactoryPreset(.largeHall)
-            case "Cathedral": state.reverb.loadFactoryPreset(.cathedral)
-            default: state.reverb.loadFactoryPreset(.mediumRoom)
+            case "Room": reverb.loadFactoryPreset(.mediumRoom)
+            case "Hall": reverb.loadFactoryPreset(.largeHall)
+            case "Cathedral": reverb.loadFactoryPreset(.cathedral)
+            default: reverb.loadFactoryPreset(.mediumRoom)
             }
-            state.reverb.wetDryMix = state.wet
-        }
-        if engine.isRunning {
-            engine.stop()
-            engine.disconnectNodeOutput(eq)
-            engine.disconnectNodeOutput(state.reverb)
-            engine.connect(eq, to: state.reverb, format: nil)
-            engine.connect(state.reverb, to: limiter, format: nil)
-            try? engine.start()
+            reverb.wetDryMix = state.wet
         }
         objectWillChange.send()
         storeEffectsForRoute()
@@ -88,10 +77,10 @@ extension AudioPlayer {
                     guard let self else { timer.invalidate(); return }
                     let s = EffectsState.shared
                     s.phase += 2 * .pi * s.panRate / 60
-                    self.playerNode.pan = Float(sin(s.phase))
+                    self.fxMixer.pan = Float(sin(s.phase))
                 }
             }
-        } else { playerNode.pan = 0 }
+        } else { fxMixer.pan = 0 }
         objectWillChange.send()
     }
 
@@ -185,18 +174,18 @@ extension AudioPlayer {
         state.sleepTimer = nil
         state.sleepDeadline = nil
         state.fadeTimer?.invalidate()
-        let startVolume = playerNode.volume
+        let startVolume = fxMixer.outputVolume
         let start = Date()
         state.fadeTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] timer in
             Task { @MainActor in
                 guard let self else { timer.invalidate(); return }
                 let fraction = min(1, Date().timeIntervalSince(start) / 10)
-                self.playerNode.volume = startVolume * Float(1 - fraction)
+                self.fxMixer.outputVolume = startVolume * Float(1 - fraction)
                 if fraction >= 1 {
                     timer.invalidate()
                     state.fadeTimer = nil
                     self.pause()
-                    self.playerNode.volume = 1
+                    self.fxMixer.outputVolume = 1
                     self.objectWillChange.send()
                 }
             }

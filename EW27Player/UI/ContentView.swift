@@ -14,6 +14,7 @@ struct ContentView: View {
             List {
                 playerSection
                 eqSection
+                AudioEffectsSection(player: player)
                 allSongsSection
                 playlistsSection
             }
@@ -24,6 +25,7 @@ struct ContentView: View {
                 }
             }
         }
+        .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
         .onChange(of: player.elapsed) { _, value in
             if !isScrubbing { scrubValue = value }
         }
