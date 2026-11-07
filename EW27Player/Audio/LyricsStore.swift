@@ -32,12 +32,12 @@ final class LyricsStore: ObservableObject {
         lyrics = nil
 
         if let imported = readImportedLyrics(for: id) {
-            lyrics = imported
+            lyrics = MornyeLyricsTiming.normalized(imported)
             return
         }
         if let cache = readCache(for: id) {
             if let cachedLyrics = cache.lyrics {
-                lyrics = cachedLyrics
+                lyrics = MornyeLyricsTiming.normalized(cachedLyrics)
                 return
             }
             if let missUntil = cache.missUntil, missUntil > Date() {
@@ -105,8 +105,9 @@ final class LyricsStore: ObservableObject {
             let candidates = additional.map(\.lyrics) + (lrclib.lyrics.map { [$0] } ?? [])
             let found = candidates.first(where: { $0.hasWordTiming }) ?? candidates.first(where: { $0.isSynced }) ?? candidates.first
             if let found {
-                self.writeCache(LyricsCache(lyrics: found, missUntil: nil), for: id)
-                self.lyrics = found
+                let normalized = MornyeLyricsTiming.normalized(found)
+                self.writeCache(LyricsCache(lyrics: normalized, missUntil: nil), for: id)
+                self.lyrics = normalized
             } else {
                 if lrclib.definitiveMiss {
                     self.writeCache(LyricsCache(lyrics: nil, missUntil: Date().addingTimeInterval(7 * 24 * 60 * 60)), for: id)

@@ -55,7 +55,11 @@ final class AudioPlayer: ObservableObject {
     }
 
     func lyricPlaybackTime(at date: Date = Date()) -> TimeInterval {
-        guard isPlaying, !isSeeking else { return elapsed }
+        guard isPlaying, !isSeeking else {
+            lyricsPlaybackClock.reset(to: elapsed, at: date)
+            return elapsed
+        }
+        let reported: TimeInterval
         if let renderTime = playerNode.lastRenderTime,
            let playerTime = playerNode.playerTime(forNodeTime: renderTime),
            playerTime.isSampleTimeValid,
@@ -64,11 +68,16 @@ final class AudioPlayer: ObservableObject {
             if renderedTime.isFinite,
                renderedTime >= max(0, elapsed - 0.75),
                renderedTime <= min(duration, elapsed + 0.75) {
-                return min(duration, max(0, renderedTime))
+                reported = min(duration, max(0, renderedTime))
+            } else {
+                let elapsedSinceUpdate = max(0, date.timeIntervalSince(lastProgressDate))
+                reported = min(duration, max(0, elapsed + elapsedSinceUpdate * Double(speed)))
             }
+        } else {
+            let elapsedSinceUpdate = max(0, date.timeIntervalSince(lastProgressDate))
+            reported = min(duration, max(0, elapsed + elapsedSinceUpdate * Double(speed)))
         }
-        let elapsedSinceUpdate = max(0, date.timeIntervalSince(lastProgressDate))
-        return min(duration, max(0, elapsed + elapsedSinceUpdate * Double(speed)))
+        return lyricsPlaybackClock.position(reported: reported, isPlaying: isPlaying, speed: Double(speed), at: date)
     }
 
     var speed: Float {
@@ -93,6 +102,7 @@ final class AudioPlayer: ObservableObject {
     let spectrumAnalyzer = SpectrumAnalyzer()
     let waveformStore = WaveformStore()
     let lyricsStore = LyricsStore()
+    private let lyricsPlaybackClock = MornyeLyricsPlaybackClock()
     let brakeController = BrakeController()
 
     private var audioFile: AVAudioFile?
