@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var showQueue = false
     @State private var searchText = ""
     @State private var favoritesOnly = false
+    @State private var vinylMode = false
 
     private let speedPresets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -132,6 +133,9 @@ struct ContentView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                if let remaining = player.sleepRemaining {
+                    Text(String(format: "Sleep %.0fs", remaining)).font(.caption2).foregroundStyle(.cyan)
+                }
             }
             Spacer(minLength: 4)
             Button { player.togglePlayPause() } label: {
@@ -189,7 +193,8 @@ struct ContentView: View {
                         }
                     }
                     .frame(width: 106, height: 106)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .clipShape(vinylMode ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 20, style: .continuous)))
+                    .rotationEffect(.degrees(vinylMode && player.isPlaying ? player.elapsed * 24 * Double(player.speed) : 0))
                     .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
                     .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
 
@@ -219,7 +224,7 @@ struct ContentView: View {
                             .background(Circle().fill(.white.opacity(0.09)))
                     }
                     Spacer()
-                    Button { player.togglePlayPause() } label: {
+                    Button { haptic(); player.togglePlayPause() } label: {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 25, weight: .bold))
                             .offset(x: player.isPlaying ? 0 : 2)
@@ -229,7 +234,7 @@ struct ContentView: View {
                             .shadow(color: .cyan.opacity(0.28), radius: 14, y: 5)
                     }
                     Spacer()
-                    Button { player.nextTrack() } label: {
+                    Button { haptic(); player.nextTrack() } label: {
                         Image(systemName: "forward.fill")
                             .font(.system(size: 19, weight: .semibold))
                             .frame(width: 48, height: 48)
@@ -268,7 +273,7 @@ struct ContentView: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                         ForEach(speedPresets, id: \.self) { value in
                             let selected = abs(player.speed - value) < 0.02
-                            Button(String(format: "%g×", value)) { player.setSpeed(value) }
+                            Button(String(format: "%g×", value)) { haptic(); player.setSpeed(value) }
                                 .font(.caption.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
@@ -291,6 +296,9 @@ struct ContentView: View {
                 }
                 .font(.caption.weight(.medium))
                 .tint(.cyan)
+                Toggle("Vinyl mode", isOn: $vinylMode)
+                    .font(.caption.weight(.medium))
+                    .tint(.cyan)
 
                 if let message = player.playbackMessage {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
@@ -518,5 +526,9 @@ struct ContentView: View {
         guard value.isFinite else { return "0:00" }
         let total = max(0, Int(value.rounded(.down)))
         return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    private func haptic() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 }
