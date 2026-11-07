@@ -74,6 +74,7 @@ final class AudioPlayer: ObservableObject {
     }()
     let spectrumAnalyzer = SpectrumAnalyzer()
     let waveformStore = WaveformStore()
+    let lyricsStore = LyricsStore()
     let brakeController = BrakeController()
 
     private var audioFile: AVAudioFile?
@@ -409,6 +410,7 @@ final class AudioPlayer: ObservableObject {
                 LoudnessNormalizer.gain(for: url, persistentID: item.persistentID) { [weak self] gain in self?.applyLoudnessGain(gain) }
             }
             duration = TimeInterval(file.length) / file.processingFormat.sampleRate
+            lyricsStore.load(for: item, duration: duration)
             trackOffset = max(0, min(duration, startTime))
             rebuildGraph(format: file.processingFormat)
             failedOpenCount = 0

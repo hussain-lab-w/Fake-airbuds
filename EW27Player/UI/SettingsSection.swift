@@ -5,12 +5,18 @@ struct SettingsSection: View {
     @AppStorage("ew27.reset.speed.on.launch") private var resetSpeedOnLaunch = false
     @AppStorage("ew27.vinyl.enabled") private var vinylEnabled = false
     @AppStorage("ew27.spectrum.enabled") private var spectrumEnabled = true
+    @AppStorage("ew27.lyrics.onlineLookup") private var onlineLyricsLookup = true
     @ObservedObject var player: AudioPlayer
 
     var body: some View {
         Section("Settings") {
             Toggle("Haptics", isOn: $hapticsEnabled)
             Toggle("Reset speed to 1x on launch", isOn: $resetSpeedOnLaunch)
+            Toggle("Online lyrics lookup (LRCLIB)", isOn: $onlineLyricsLookup)
+                .onChange(of: onlineLyricsLookup) { _, enabled in player.lyricsStore.onlineLookupSettingChanged(enabled) }
+            Text("Sends title, artist, album and duration to lrclib.net")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Toggle("Vinyl mode", isOn: $vinylEnabled)
             Picker("Brake on pause", selection: Binding(get: { player.brakeMode }, set: { player.setBrakeMode($0) })) {
                 ForEach(BrakeController.Mode.allCases) { mode in Text(mode.rawValue).tag(mode) }

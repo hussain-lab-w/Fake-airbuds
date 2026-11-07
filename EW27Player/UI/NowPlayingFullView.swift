@@ -39,11 +39,7 @@ struct NowPlayingFullView: View {
                 .padding(.bottom, 8)
 
                 if showLyrics {
-                    LyricsView(
-                        title: player.currentItem?.title ?? "No track selected",
-                        artist: player.currentItem?.artist ?? "",
-                        lyrics: player.currentItem?.lyrics
-                    )
+                    LyricsView(player: player, store: player.lyricsStore)
                     .frame(width: geometry.size.width, height: max(0, geometry.size.height - 69))
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                 } else {
