@@ -55,6 +55,17 @@ final class AudioPlayer: ObservableObject {
 
     func lyricPlaybackTime(at date: Date = Date()) -> TimeInterval {
         guard isPlaying, !isSeeking else { return elapsed }
+        if let renderTime = playerNode.lastRenderTime,
+           let playerTime = playerNode.playerTime(forNodeTime: renderTime),
+           playerTime.isSampleTimeValid,
+           playerTime.sampleRate > 0 {
+            let renderedTime = Double(playerTime.sampleTime) / playerTime.sampleRate
+            if renderedTime.isFinite,
+               renderedTime >= max(0, elapsed - 0.75),
+               renderedTime <= min(duration, elapsed + 0.75) {
+                return min(duration, max(0, renderedTime))
+            }
+        }
         let elapsedSinceUpdate = max(0, date.timeIntervalSince(lastProgressDate))
         return min(duration, max(0, elapsed + elapsedSinceUpdate * Double(speed)))
     }
