@@ -12,7 +12,7 @@ struct ContentView: View {
     @State private var showQueue = false
     @State private var searchText = ""
     @State private var favoritesOnly = false
-    @State private var vinylMode = false
+    @AppStorage("ew27.vinyl.enabled") private var vinylMode = false
 
     private let speedPresets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -167,10 +167,13 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 16) {
                     Group {
-                        if let artwork = player.currentArtwork {
+                        if vinylMode {
+                            VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
+                        } else if let artwork = player.currentArtwork {
                             Image(uiImage: artwork)
                                 .resizable()
                                 .scaledToFill()
+                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         } else {
                             ZStack {
                                 LinearGradient(colors: [Color.cyan.opacity(0.75), Color.blue.opacity(0.38), Color.purple.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -178,11 +181,10 @@ struct ContentView: View {
                                     .font(.system(size: 38, weight: .medium))
                                     .foregroundStyle(.white.opacity(0.92))
                             }
+                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         }
                     }
                     .frame(width: 106, height: 106)
-                    .clipShape(vinylMode ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 20, style: .continuous)))
-                    .rotationEffect(.degrees(vinylMode && player.isPlaying ? player.elapsed * 24 * Double(player.speed) : 0))
                     .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
                     .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
 
