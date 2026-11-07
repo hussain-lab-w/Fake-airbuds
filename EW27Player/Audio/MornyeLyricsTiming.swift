@@ -55,8 +55,9 @@ enum MornyeLyricsTiming {
 
             let nextLineStart = index + 1 < sourceLines.count ? sourceLines[index + 1].start : nil
             let pace = medianWordPace(line.words)
-            var lineEnd = line.end.flatMap { $0 > line.start ? $0 : nil }
-            if let lastEnd = line.words.last?.end, lastEnd > line.start {
+            var lineEnd: TimeInterval? = line.end > line.start ? line.end : nil
+            let lastEnd = line.words.last?.end ?? 0
+            if lastEnd > line.start {
                 lineEnd = max(lineEnd ?? 0, lastEnd)
             }
             if lineEnd == nil, let nextLineStart, nextLineStart > line.start, nextLineStart - line.start <= 4 {
@@ -71,7 +72,7 @@ enum MornyeLyricsTiming {
             for wordIndex in line.words.indices {
                 let word = line.words[wordIndex]
                 let nextWordStart = wordIndex + 1 < line.words.count ? line.words[wordIndex + 1].start : nil
-                var end = word.end.flatMap { $0 > word.start ? $0 : nil }
+                var end: TimeInterval? = word.end > word.start ? word.end : nil
                 if end == nil, let nextWordStart, nextWordStart > word.start { end = nextWordStart }
                 if end == nil, lineEnd! > word.start { end = lineEnd }
                 if end == nil { end = word.start + min(3, max(0.7, pace * 2.5)) }
