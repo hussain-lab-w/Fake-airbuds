@@ -72,6 +72,7 @@ struct ContentView: View {
             appList {
                 eqSection
                 AudioEffectsSection(player: player)
+                SettingsSection(player: player)
             }
             .navigationTitle("Sound")
             .navigationBarTitleDisplayMode(.inline)
@@ -462,6 +463,7 @@ struct ContentView: View {
     }
 
     private func haptic() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let enabled = UserDefaults.standard.object(forKey: "ew27.haptics.enabled") as? Bool ?? true
+        if enabled { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
     }
 }

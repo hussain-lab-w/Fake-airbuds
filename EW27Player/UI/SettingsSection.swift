@@ -1,0 +1,18 @@
+import SwiftUI
+
+struct SettingsSection: View {
+    @AppStorage("ew27.haptics.enabled") private var hapticsEnabled = true
+    @AppStorage("ew27.reset.speed.on.launch") private var resetSpeedOnLaunch = false
+    @AppStorage("ew27.vinyl.enabled") private var vinylEnabled = false
+    @AppStorage("ew27.spectrum.enabled") private var spectrumEnabled = true
+    @ObservedObject var player: AudioPlayer
+
+    var body: some View {
+        Section("Settings") {
+            Toggle("Haptics", isOn: $hapticsEnabled)
+            Toggle("Reset speed to 1x on launch", isOn: $resetSpeedOnLaunch)
+            Toggle("Vinyl mode", isOn: $vinylEnabled)
+            Toggle("Spectrum analyzer", isOn: Binding(get: { spectrumEnabled }, set: { value in spectrumEnabled = value; player.setSpectrumEnabled(value) }))
+        }
+    }
+}

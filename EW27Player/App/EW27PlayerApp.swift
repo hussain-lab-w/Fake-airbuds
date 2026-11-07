@@ -12,7 +12,10 @@ struct EW27PlayerApp: App {
                 .environmentObject(library)
                 .environmentObject(player)
                 .environmentObject(favorites)
-                .task { await library.requestAccessAndLoad() }
+                .task {
+                    await library.requestAccessAndLoad()
+                    player.restoreSession()
+                }
         }
     }
 }

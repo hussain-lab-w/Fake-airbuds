@@ -96,7 +96,9 @@ final class AudioPlayer: ObservableObject {
 
     init() {
         configureEQ()
-        if let storedSpeed = UserDefaults.standard.object(forKey: globalSpeedDefaultsKey) as? NSNumber {
+        if UserDefaults.standard.bool(forKey: "ew27.reset.speed.on.launch") {
+            speed = 1
+        } else if let storedSpeed = UserDefaults.standard.object(forKey: globalSpeedDefaultsKey) as? NSNumber {
             speed = max(0.25, min(4, storedSpeed.floatValue))
         } else {
             speed = 1
@@ -187,6 +189,19 @@ final class AudioPlayer: ObservableObject {
         currentIndex = playable.firstIndex(where: { $0.persistentID == item.persistentID }) ?? 0
         failedOpenCount = 0
         startCurrentTrack(at: 0, shouldPlay: true)
+        persistSession()
+    }
+
+    func restoreSession() {
+        guard let data = UserDefaults.standard.data(forKey: "ew27.session.v1"),
+              let saved = try? JSONDecoder().decode(SessionSnapshot.self, from: data),
+              let items = MPMediaQuery.songs().items else { return }
+        let byID = Dictionary(uniqueKeysWithValues: items.map { ($0.persistentID, $0) })
+        let restoredQueue = saved.queueIDs.compactMap { byID[$0] }.filter { $0.assetURL != nil }
+        guard !restoredQueue.isEmpty, let index = restoredQueue.firstIndex(where: { $0.persistentID == saved.currentID }) else { return }
+        queue = restoredQueue
+        currentIndex = index
+        startCurrentTrack(at: saved.elapsed, shouldPlay: false)
     }
 
     func togglePlayPause() {
@@ -205,6 +220,7 @@ final class AudioPlayer: ObservableObject {
         isPlaying = false
         lastProgressDate = Date()
         updateNowPlaying()
+        persistSession()
     }
 
     func nextTrack() {
@@ -212,21 +228,25 @@ final class AudioPlayer: ObservableObject {
         currentIndex = nextIndex()
         failedOpenCount = 0
         startCurrentTrack(at: 0, shouldPlay: true)
+        persistSession()
     }
 
     func addToQueue(_ item: MPMediaItem, playNext: Bool = false) {
         guard item.assetURL != nil, !queue.contains(where: { $0.persistentID == item.persistentID }) else { return }
         queue.insert(item, at: playNext ? min(currentIndex + 1, queue.count) : queue.count)
+        persistSession()
     }
 
     func removeFromQueue(at offsets: IndexSet) {
         queue.remove(atOffsets: offsets)
         if let currentID = currentItem?.persistentID, let index = queue.firstIndex(where: { $0.persistentID == currentID }) { currentIndex = index }
+        persistSession()
     }
 
     func moveQueue(from source: IndexSet, to destination: Int) {
         queue.move(fromOffsets: source, toOffset: destination)
         if let currentID = currentItem?.persistentID, let index = queue.firstIndex(where: { $0.persistentID == currentID }) { currentIndex = index }
+        persistSession()
     }
 
     func jumpToQueue(index: Int) {
@@ -285,6 +305,20 @@ final class AudioPlayer: ObservableObject {
         speed = speed + (target - speed) * 0.35
         applyPlaybackRate()
     }
+
+    private struct SessionSnapshot: Codable {
+        var currentID: UInt64
+        var elapsed: TimeInterval
+        var queueIDs: [UInt64]
+    }
+
+    private func persistSession() {
+        guard let currentID = currentItem?.persistentID, !queue.isEmpty else { return }
+        let snapshot = SessionSnapshot(currentID: currentID, elapsed: elapsed, queueIDs: queue.map(\.persistentID))
+        if let data = try? JSONEncoder().encode(snapshot) { UserDefaults.standard.set(data, forKey: "ew27.session.v1") }
+    }
+
+    func setSpectrumEnabled(_ enabled: Bool) { spectrumAnalyzer.setEnabled(enabled) }
 
     private func configureAudioSession() {
         do {

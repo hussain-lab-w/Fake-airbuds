@@ -17,6 +17,7 @@ final class SpectrumAnalyzer {
     private var peaks = Array(repeating: Float.zero, count: 32)
     private var lastPublish = Date.distantPast
     private var installed = false
+    private var enabled = true
 
     init() {
         window = Array(repeating: 0, count: fftSize)
@@ -35,6 +36,8 @@ final class SpectrumAnalyzer {
     func remove(from mixer: AVAudioMixerNode) {
         if installed { mixer.removeTap(onBus: 0); installed = false }
     }
+
+    func setEnabled(_ value: Bool) { enabled = value }
 
     func install(on mixer: AVAudioMixerNode, model: SpectrumModel) {
         mixer.removeTap(onBus: 0)
@@ -55,6 +58,7 @@ final class SpectrumAnalyzer {
     }
 
     private func process(samples: [Float], sampleRate: Double) -> [Float]? {
+        guard enabled else { return nil }
         lock.lock()
         defer { lock.unlock() }
         guard let fftSetup else { return nil }
