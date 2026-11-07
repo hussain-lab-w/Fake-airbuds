@@ -467,6 +467,7 @@ private struct InterludeDots: View {
     }
 
     private var isVisible: Bool { time >= start - 0.2 && time <= end }
+    private var breathingScale: CGFloat { CGFloat(1.0 + 0.18 * sin(progress * .pi * 2)) }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -475,7 +476,7 @@ private struct InterludeDots: View {
                 Circle()
                     .fill(.white.opacity(0.25 + 0.75 * fill))
                     .frame(width: 12, height: 12)
-                    .scaleEffect((1.0 + 0.18 * sin(progress * .pi * 2)) * (0.9 + 0.1 * fill))
+                    .scaleEffect(breathingScale * CGFloat(0.9 + 0.1 * fill))
             }
         }
         .padding(.vertical, 14)
