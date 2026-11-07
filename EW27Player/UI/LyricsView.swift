@@ -173,35 +173,7 @@ struct LyricsView: View {
     // MARK: - Synced lyrics
 
     private func syncedContent(_ lines: [LyricLine]) -> some View {
-        GeometryReader { geo in
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !player.isPlaying)) { context in
-                let time = player.lyricPlaybackTime(at: context.date) + store.syncOffset
-                let state = playbackState(lines: lines, time: time)
-                ScrollViewReader { proxy in
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: 22) {
-                            Color.clear.frame(height: geo.size.height * 0.38)
-                            ForEach(rows(for: lines)) { row in
-                                rowView(row, lines: lines, time: time, state: state)
-                            }
-                            Color.clear.frame(height: geo.size.height * 0.62 + 120)
-                        }
-                        .padding(.leading, 24)
-                        .padding(.trailing, 20)
-                    }
-                    .simultaneousGesture(DragGesture(minimumDistance: 3).onChanged { _ in pauseAutoScroll() })
-                    .onChange(of: state.scrollID) { _, id in
-                        guard !autoScrollPaused, let id else { return }
-                        withAnimation(.easeInOut(duration: 0.72)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
-                    }
-                    .onChange(of: autoScrollPaused) { _, paused in
-                        guard !paused, let id = state.scrollID else { return }
-                        withAnimation(.easeInOut(duration: 0.72)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
-                    }
-                    .mask(edgeFade(height: geo.size.height))
-                }
-            }
-        }
+        LyricsCascadeView(player: player, store: store, lines: lines, fontSize: CGFloat(fontSize), reduceMotion: reduceMotion)
     }
 
     @ViewBuilder
