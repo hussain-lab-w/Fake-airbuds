@@ -226,9 +226,9 @@ struct LyricsView: View {
         let distance = abs(index - max(state.focusIndex, 0))
         let lineTime = mappedTime(time, for: line)
         let relaxed = autoScrollPaused
-        let opacity: Double = isSinging ? 1 : (relaxed ? 0.6 : (isPast ? 0.28 : 0.45))
-        let blurRadius: CGFloat = (reduceMotion || relaxed || isSinging) ? 0 : CGFloat(min(3.5, Double(max(0, distance - 1)) * 1.2))
-        return FlowLayout(spacing: 8) {
+        let opacity: Double = isSinging ? 1 : (relaxed ? 0.6 : 0.38)
+        let blurRadius: CGFloat = (reduceMotion || relaxed || isSinging) ? 0 : CGFloat(min(6, Double(max(0, distance - 1)) * 1.5))
+        return FlowLayout(spacing: CGFloat(fontSize) * 0.26) {
             ForEach(Array(line.words.enumerated()), id: \.offset) { _, word in
                 SyncedLyricWord(word: word, time: lineTime, isActiveLine: isSinging, fontSize: CGFloat(fontSize))
             }
@@ -325,9 +325,9 @@ struct LyricsView: View {
             return LyricsPlaybackState(focusIndex: focus, singingIndex: focus, scrollID: "line\(focus)")
         }
         if focus + 1 < lines.count, lines[focus + 1].start - sungEnd > Self.gapThreshold {
-            return LyricsPlaybackState(focusIndex: focus, singingIndex: nil, scrollID: "gap\(focus)")
-        }
-        return LyricsPlaybackState(focusIndex: focus, singingIndex: nil, scrollID: "line\(focus)")
+                return LyricsPlaybackState(focusIndex: focus, singingIndex: nil, scrollID: line.end - line.start < 0.6 ? nil : "gap\(focus)")
+            }
+        return LyricsPlaybackState(focusIndex: focus, singingIndex: nil, scrollID: line.end - line.start < 0.6 ? nil : "line\(focus)")
     }
 
     private func rows(for lines: [LyricLine]) -> [LyricRow] {
@@ -475,12 +475,12 @@ private struct InterludeDots: View {
                 Circle()
                     .fill(.white.opacity(0.25 + 0.75 * fill))
                     .frame(width: 12, height: 12)
-                    .scaleEffect(0.8 + 0.2 * fill)
+                    .scaleEffect((1.0 + 0.18 * sin(progress * .pi * 2)) * (0.9 + 0.1 * fill))
             }
         }
         .padding(.vertical, 14)
-        .opacity(isVisible ? 1 : 0.15)
-        .animation(.easeInOut(duration: 0.25), value: isVisible)
+        .opacity(isVisible ? (time > end - 0.3 ? max(0, (end - time) / 0.3) : 1) : 0.15)
+        .animation(.easeInOut(duration: 0.3), value: isVisible)
     }
 }
 
@@ -496,11 +496,16 @@ private struct SyncedLyricWord: View {
     }
 
     private var isCurrent: Bool { isActiveLine && progress > 0 && progress < 1 }
+    private var isBackgroundVocal: Bool { word.text.hasPrefix("(") && word.text.hasSuffix(")") }
+    private var longWordScale: CGFloat {
+        guard isCurrent, word.end - word.start > 1 else { return 1 }
+        return 1 + 0.06 * sin(progress * .pi)
+    }
 
     var body: some View {
         ZStack(alignment: .leading) {
             Text(word.text)
-                .foregroundStyle(.white.opacity(isActiveLine ? 0.35 : 1))
+                .foregroundStyle(.white.opacity(isBackgroundVocal ? 0.28 : 0.38))
             if isActiveLine {
                 Text(word.text)
                     .foregroundStyle(.white)
@@ -525,11 +530,14 @@ private struct SyncedLyricWord: View {
                             }
                         }
                     }
-                    .shadow(color: .cyan.opacity(isCurrent ? 0.35 : 0), radius: 8)
+                    .opacity(isBackgroundVocal ? 0.28 : 1)
+                    .shadow(color: .white.opacity(isCurrent ? 0.35 : 0), radius: 10)
             }
         }
-        .font(.system(size: fontSize, weight: .bold, design: .rounded))
+        .font(.system(size: isBackgroundVocal ? fontSize * 0.72 : fontSize, weight: .bold, design: .default))
+        .tracking(-0.4)
         .fixedSize(horizontal: true, vertical: false)
+        .scaleEffect(longWordScale, anchor: .bottomLeading)
         .offset(y: isCurrent ? -1.5 : 0)
         .animation(.easeInOut(duration: 0.22), value: isCurrent)
     }
