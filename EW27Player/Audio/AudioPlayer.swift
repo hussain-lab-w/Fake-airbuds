@@ -27,19 +27,36 @@ final class AudioPlayer: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var hasFinished = false
     @Published private(set) var routeName = noRoute
-    @Published private(set) var elapsed: TimeInterval = 0
-    @Published private(set) var duration: TimeInterval = 0
     @Published private(set) var playbackMessage: String?
     @Published private(set) var currentArtwork: UIImage?
-    @Published private(set) var spectrumBars = Array(repeating: Float.zero, count: 32)
     @Published var eqGains: [Float] = Array(repeating: 0, count: 10)
     @Published var eqEnabled = true
     @Published private(set) var activeEQProfileName: String?
     @Published var preamp: Float = 0
     @Published var selectedPreset: Preset = .flat
     @Published var shuffleEnabled = false
-    @Published private(set) var speed: Float = 1
     @Published var keepPitch = false
+
+    let clock = PlaybackClock()
+    let speedState = SpeedState()
+    let spectrumModel = SpectrumModel()
+
+    var elapsed: TimeInterval {
+        get { clock.elapsed }
+        set { clock.elapsed = newValue }
+    }
+
+    var duration: TimeInterval {
+        get { clock.duration }
+        set { clock.duration = newValue }
+    }
+
+    var speed: Float {
+        get { speedState.displayed }
+        set { speedState.displayed = newValue }
+    }
+
+    var spectrumBars: [Float] { spectrumModel.bars }
 
     let engine = AVAudioEngine()
     let playerNode = AVAudioPlayerNode()
@@ -108,14 +125,14 @@ final class AudioPlayer: ObservableObject {
         guard eqGains.indices.contains(index) else { return }
         eqGains[index] = max(-12, min(12, gain))
         applyEQSettings()
-        saveSettingsForCurrentRoute()
     }
 
     func setPreamp(_ value: Float) {
         preamp = max(-12, min(12, value))
         applyEQSettings()
-        saveSettingsForCurrentRoute()
     }
+
+    func commitEQSettings() { saveSettingsForCurrentRoute() }
 
     func applyPreset(_ preset: Preset) {
         selectedPreset = preset
@@ -262,6 +279,13 @@ final class AudioPlayer: ObservableObject {
         }
     }
 
+    func setSpeedWhileDragging(_ value: Float) {
+        let target = max(0.25, min(4, value))
+        rampTimer?.invalidate()
+        speed = speed + (target - speed) * 0.35
+        applyPlaybackRate()
+    }
+
     private func configureAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
@@ -405,7 +429,7 @@ final class AudioPlayer: ObservableObject {
 
     private func updateProgress() {
         guard isPlaying, !isSeeking else { return }
-        spectrumBars = spectrumAnalyzer.bars
+        spectrumModel.bars = spectrumAnalyzer.bars
         let now = Date()
         elapsed = min(duration, elapsed + now.timeIntervalSince(lastProgressDate) * Double(speed))
         lastProgressDate = now

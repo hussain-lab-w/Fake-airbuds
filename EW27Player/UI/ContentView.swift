@@ -30,9 +30,6 @@ struct ContentView: View {
         }
         .tint(Color(red: 0.38, green: 0.78, blue: 1))
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
-        .onChange(of: player.elapsed) { _, value in
-            if !isScrubbing { scrubValue = value }
-        }
         .sheet(isPresented: $showQueue) { QueueView(player: player) }
         .preferredColorScheme(.dark)
     }
@@ -158,16 +155,7 @@ struct ContentView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
         .overlay(alignment: .bottom) {
-            GeometryReader { proxy in
-                let progress = player.duration > 0 ? CGFloat(min(1, max(0, player.elapsed / player.duration))) : 0
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.10))
-                    Capsule()
-                        .fill(LinearGradient(colors: [.cyan, .blue], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: proxy.size.width * progress)
-                }
-            }
-            .frame(height: 2)
+            MiniProgressLine(clock: player.clock)
             .padding(.horizontal, 14)
             .padding(.bottom, 6)
         }
@@ -244,48 +232,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
 
-                SpectrumView(bars: player.spectrumBars)
-
-                VStack(spacing: 2) {
-                    Slider(value: $scrubValue, in: 0...max(1, player.duration), onEditingChanged: { editing in
-                        isScrubbing = editing
-                        if !editing { player.seek(to: scrubValue) }
-                    })
-                    .tint(.cyan)
-                    HStack {
-                        Text(formatTime(isScrubbing ? scrubValue : player.elapsed))
-                        Spacer()
-                        Text(formatTime(player.duration))
-                    }
-                    .font(.caption2.monospacedDigit().weight(.medium))
-                    .foregroundStyle(.white.opacity(0.58))
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Label("Speed", systemImage: "speedometer")
-                            .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Text(String(format: "%.2fx", player.speed))
-                            .font(.caption.monospacedDigit().weight(.bold))
-                            .foregroundStyle(.cyan)
-                    }
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                        ForEach(speedPresets, id: \.self) { value in
-                            let selected = abs(player.speed - value) < 0.02
-                            Button(String(format: "%g×", value)) { haptic(); player.setSpeed(value) }
-                                .font(.caption.weight(.semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(Capsule().fill(selected ? Color.cyan.opacity(0.22) : Color.white.opacity(0.07)))
-                                .overlay(Capsule().stroke(selected ? Color.cyan.opacity(0.65) : Color.white.opacity(0.08), lineWidth: 1))
-                                .foregroundStyle(selected ? .cyan : .white.opacity(0.8))
-                                .buttonStyle(.plain)
-                        }
-                    }
-                    Slider(value: Binding(get: { Double(player.speed) }, set: { player.setSpeed(Float($0)) }), in: 0.25...4)
-                        .tint(.cyan)
-                }
+                PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel)
 
                 HStack(spacing: 16) {
                     Button { showQueue = true } label: { Label("Up Next", systemImage: "list.bullet") }
@@ -358,7 +305,7 @@ struct ContentView: View {
                 ForEach(Array(zip(["31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"], 0..<10)), id: \.1) { title, index in
                     eqSlider(index: index, title: title)
                 }
-                eqSlider(title: "Preamp", value: Binding(get: { player.preamp }, set: { player.setPreamp($0) }))
+                EQSliderControl(player: player, index: nil, title: "Preamp")
 
                 Button { player.resetEQ() } label: {
                     Label("Reset to Flat", systemImage: "arrow.counterclockwise")
@@ -503,23 +450,7 @@ struct ContentView: View {
     }
 
     private func eqSlider(index: Int, title: String) -> some View {
-        eqSlider(title: title, value: Binding(
-            get: { player.eqGains.indices.contains(index) ? player.eqGains[index] : 0 },
-            set: { player.setBandGain(index: index, gain: $0) }
-        ))
-    }
-
-    private func eqSlider(title: String, value: Binding<Float>) -> some View {
-        VStack(alignment: .leading) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text(String(format: "%+.1f dB", value.wrappedValue))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            Slider(value: value, in: -12...12, step: 0.5)
-        }
+        EQSliderControl(player: player, index: index, title: title)
     }
 
     private func formatTime(_ value: TimeInterval) -> String {
