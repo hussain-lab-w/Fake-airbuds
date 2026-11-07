@@ -187,7 +187,7 @@ struct LyricsView: View {
         let stanzas = normalized.components(separatedBy: "\n\n")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-        ScrollView {
+        return ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 ForEach(Array(stanzas.enumerated()), id: \.offset) { _, stanza in
                     VStack(alignment: .leading, spacing: 8) {
