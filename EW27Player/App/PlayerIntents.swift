@@ -43,10 +43,8 @@ struct PreviousTrackIntent: AppIntent {
 
 struct EW27PlayerShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        [
-            AppShortcut(intent: PlayPauseIntent(), phrases: ["Play or pause in \\(.applicationName)"], shortTitle: "Play/Pause", systemImageName: "playpause"),
-            AppShortcut(intent: NextTrackIntent(), phrases: ["Next track in \\(.applicationName)"], shortTitle: "Next", systemImageName: "forward.fill"),
-            AppShortcut(intent: ToggleEQIntent(), phrases: ["Toggle EQ in \\(.applicationName)"], shortTitle: "Toggle EQ", systemImageName: "slider.horizontal.3")
-        ]
+        AppShortcut(intent: PlayPauseIntent(), phrases: ["Play or pause in \(.applicationName)"], shortTitle: "Play/Pause", systemImageName: "playpause")
+        AppShortcut(intent: NextTrackIntent(), phrases: ["Next track in \(.applicationName)"], shortTitle: "Next", systemImageName: "forward.fill")
+        AppShortcut(intent: ToggleEQIntent(), phrases: ["Toggle EQ in \(.applicationName)"], shortTitle: "Toggle EQ", systemImageName: "slider.horizontal.3")
     }
 }
