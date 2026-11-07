@@ -77,7 +77,7 @@ struct NowPlayingFullView: View {
             }
         })
 
-        })
+        }
     }
 
     private var background: some View {
