@@ -5,6 +5,7 @@ import UIKit
 
 @MainActor
 final class AudioPlayer: ObservableObject {
+    static let shared = AudioPlayer()
     static let noRoute = "No output"
 
     enum Preset: String, CaseIterable, Identifiable, Codable {
@@ -38,6 +39,8 @@ final class AudioPlayer: ObservableObject {
     @Published var shuffleEnabled = false
     @Published var keepPitch = false
     @Published var normalizeLoudness = false
+    @Published private(set) var exportProgress: Double?
+    @Published private(set) var exportedURL: URL?
 
     let clock = PlaybackClock()
     let speedState = SpeedState()
@@ -348,6 +351,23 @@ final class AudioPlayer: ObservableObject {
     var brakeMode: BrakeController.Mode { brakeController.mode }
 
     func setBrakeMode(_ mode: BrakeController.Mode) { brakeController.mode = mode }
+
+    func exportCurrentTrack() {
+        guard let url = currentItem?.assetURL, let file = try? AVAudioFile(forReading: url) else { return }
+        exportProgress = 0
+        Task { @MainActor in
+            do {
+                let result = try await ProcessedAudioExporter.export(file: file, player: self) { [weak self] value in
+                    self?.exportProgress = value
+                }
+                exportedURL = result
+                exportProgress = nil
+            } catch {
+                exportProgress = nil
+                playbackMessage = "Export failed."
+            }
+        }
+    }
 
     func setNormalizeLoudness(_ enabled: Bool) {
         normalizeLoudness = enabled

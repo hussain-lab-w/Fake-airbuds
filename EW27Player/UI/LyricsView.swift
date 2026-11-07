@@ -24,7 +24,7 @@ struct LyricsView: View {
     }
 
     private var lineAnimation: Animation? {
-        reduceMotion ? nil : Animation.spring(response: 0.45, dampingFraction: 0.85)
+        reduceMotion ? nil : Animation.interpolatingSpring(stiffness: 118, damping: 18)
     }
 
     private var sourceBadge: String {
@@ -33,6 +33,10 @@ struct LyricsView: View {
         case .lrclib:
             if lyrics.lines.isEmpty { return "LRCLIB · unsynced" }
             return lyrics.hasWordTiming ? "LRCLIB · word-synced" : "LRCLIB · word timing estimated"
+        case .netease:
+            return lyrics.hasWordTiming ? "NetEase · word-synced" : "NetEase · line-synced"
+        case .lyricsOvh:
+            return "Lyrics.ovh · unsynced"
         case .imported:
             if lyrics.lines.isEmpty { return "Imported · unsynced" }
             return lyrics.hasWordTiming ? "Imported · word-synced" : "Imported · word timing estimated"
@@ -188,11 +192,11 @@ struct LyricsView: View {
                     .simultaneousGesture(DragGesture(minimumDistance: 3).onChanged { _ in pauseAutoScroll() })
                     .onChange(of: state.scrollID) { _, id in
                         guard !autoScrollPaused, let id else { return }
-                        withAnimation(.easeInOut(duration: 0.5)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
+                        withAnimation(.easeInOut(duration: 0.72)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
                     }
                     .onChange(of: autoScrollPaused) { _, paused in
                         guard !paused, let id = state.scrollID else { return }
-                        withAnimation(.easeInOut(duration: 0.5)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
+                        withAnimation(.easeInOut(duration: 0.72)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
                     }
                     .mask(edgeFade(height: geo.size.height))
                 }
@@ -235,6 +239,7 @@ struct LyricsView: View {
         .blur(radius: blurRadius)
         .animation(lineAnimation, value: state.focusIndex)
         .animation(lineAnimation, value: isSinging)
+        .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
         .contentShape(Rectangle())
         .onTapGesture { player.seek(to: line.start) }
         .contextMenu {
@@ -526,7 +531,7 @@ private struct SyncedLyricWord: View {
         .font(.system(size: fontSize, weight: .bold, design: .rounded))
         .fixedSize(horizontal: true, vertical: false)
         .offset(y: isCurrent ? -1.5 : 0)
-        .animation(.easeOut(duration: 0.15), value: isCurrent)
+        .animation(.easeInOut(duration: 0.22), value: isCurrent)
     }
 }
 

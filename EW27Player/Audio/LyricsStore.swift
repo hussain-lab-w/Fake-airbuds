@@ -62,7 +62,7 @@ final class LyricsStore: ObservableObject {
             }
             return
         }
-        guard let currentItem, lyrics?.source != .lrclib, lyrics?.source != .imported else { return }
+        guard let currentItem, lyrics?.source != .imported else { return }
         load(for: currentItem, duration: currentDuration, force: true)
     }
 
@@ -99,13 +99,16 @@ final class LyricsStore: ObservableObject {
         let id = item.persistentID
         lookupTask = Task { [weak self] in
             guard let self else { return }
-            let result = await self.lookupLRCLIB(title: title, artist: artist, album: album, duration: roundedDuration)
+            let additional = await LyricsProviderClient.lookup(title: title, artist: artist, album: album, duration: roundedDuration)
+            let lrclib = await self.lookupLRCLIB(title: title, artist: artist, album: album, duration: roundedDuration)
             guard !Task.isCancelled, self.currentTrackID == id else { return }
-            if let found = result.lyrics {
+            let candidates = additional.map(\.lyrics) + (lrclib.lyrics.map { [$0] } ?? [])
+            let found = candidates.first(where: { $0.hasWordTiming }) ?? candidates.first(where: { $0.isSynced }) ?? candidates.first
+            if let found {
                 self.writeCache(LyricsCache(lyrics: found, missUntil: nil), for: id)
                 self.lyrics = found
             } else {
-                if result.definitiveMiss {
+                if lrclib.definitiveMiss {
                     self.writeCache(LyricsCache(lyrics: nil, missUntil: Date().addingTimeInterval(7 * 24 * 60 * 60)), for: id)
                 }
                 self.lyrics = self.embeddedLyrics(for: item)

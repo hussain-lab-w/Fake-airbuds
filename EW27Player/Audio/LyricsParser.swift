@@ -124,6 +124,33 @@ enum LyricsParser {
         return TrackLyrics(lines: lines, source: source, hasWordTiming: hasWordTiming, plainText: rawLines.map(\.text).joined(separator: "\n"))
     }
 
+    static func parseNetEaseYRC(_ text: String) -> TrackLyrics? {
+        struct Raw { var start: TimeInterval; var words: [LyricWord] }
+        let lineRegex = try! NSRegularExpression(pattern: #"^\[(\d+),\d+\](.*)$"#)
+        let wordRegex = try! NSRegularExpression(pattern: #"\((\d+),(\d+)\)([^()]*)"#)
+        var raw: [Raw] = []
+        for line in text.components(separatedBy: .newlines) {
+            let range = NSRange(line.startIndex..., in: line)
+            guard let header = lineRegex.firstMatch(in: line, range: range), let a = Range(header.range(at: 1), in: line), let lineStart = Double(String(line[a])) else { continue }
+            let body = Range(header.range(at: 2), in: line).map { String(line[$0]) } ?? ""
+            var words: [LyricWord] = []
+            for match in wordRegex.matches(in: body, range: NSRange(body.startIndex..., in: body)) {
+                guard let sa = Range(match.range(at: 1), in: body), let da = Range(match.range(at: 2), in: body), let ta = Range(match.range(at: 3), in: body), let start = Double(String(body[sa])), let duration = Double(String(body[da])) else { continue }
+                let tokens = WordTiming.splitWords(String(body[ta])); let begin = start / 1000; let end = begin + duration / 1000
+                words.append(contentsOf: tokens.count == 1 ? [LyricWord(text: tokens[0], start: begin, end: end)] : WordTiming.estimate(words: tokens, start: begin, end: end))
+            }
+            if !words.isEmpty { raw.append(Raw(start: lineStart / 1000, words: words)) }
+        }
+        guard !raw.isEmpty else { return nil }
+        raw.sort { $0.start < $1.start }
+        let lines = raw.indices.map { index -> LyricLine in
+            let end = index + 1 < raw.count ? max(raw[index].start, raw[index + 1].start) : (raw[index].words.last?.end ?? raw[index].start + 4)
+            let words = raw[index].words.map { LyricWord(text: $0.text, start: max(raw[index].start, $0.start), end: min(end, max($0.start, $0.end))) }
+            return LyricLine(start: raw[index].start, end: end, words: words)
+        }
+        return TrackLyrics(lines: lines, source: .netease, hasWordTiming: true, plainText: lines.map { $0.words.map { $0.text }.joined(separator: " ") }.joined(separator: "\n"))
+    }
+
     static func parseTTML(_ data: Data, source: LyricsSource = .imported) -> TrackLyrics {
         let delegate = TTMLParserDelegate()
         let parser = XMLParser(data: data)

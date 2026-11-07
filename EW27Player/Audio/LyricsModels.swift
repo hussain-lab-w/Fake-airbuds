@@ -15,6 +15,8 @@ struct LyricLine: Codable, Equatable {
 enum LyricsSource: String, Codable {
     case embeddedPlain
     case lrclib
+    case netease
+    case lyricsOvh
     case imported
 }
 

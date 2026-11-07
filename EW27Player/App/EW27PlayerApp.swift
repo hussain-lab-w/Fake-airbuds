@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct EW27PlayerApp: App {
     @StateObject private var library = MediaLibraryStore()
-    @StateObject private var player = AudioPlayer()
+    @StateObject private var player = AudioPlayer.shared
     @StateObject private var favorites = FavoritesStore()
 
     var body: some Scene {
