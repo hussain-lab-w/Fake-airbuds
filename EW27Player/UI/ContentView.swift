@@ -5,9 +5,13 @@ import UIKit
 struct ContentView: View {
     @EnvironmentObject private var library: MediaLibraryStore
     @EnvironmentObject private var player: AudioPlayer
+    @EnvironmentObject private var favorites: FavoritesStore
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
     @State private var selectedTab: AppTab = .player
+    @State private var showQueue = false
+    @State private var searchText = ""
+    @State private var favoritesOnly = false
 
     private let speedPresets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -28,6 +32,7 @@ struct ContentView: View {
         .onChange(of: player.elapsed) { _, value in
             if !isScrubbing { scrubValue = value }
         }
+        .sheet(isPresented: $showQueue) { QueueView(player: player) }
         .preferredColorScheme(.dark)
     }
 
@@ -44,11 +49,13 @@ struct ContentView: View {
     private var libraryTab: some View {
         NavigationStack {
             appList {
+                Toggle("Favorites only", isOn: $favoritesOnly)
                 allSongsSection
                 playlistsSection
             }
             .navigationTitle("Library")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Title, artist, or album")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { Task { await library.requestAccessAndLoad() } } label: {
@@ -232,6 +239,8 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
 
+                SpectrumView(bars: player.spectrumBars)
+
                 VStack(spacing: 2) {
                     Slider(value: $scrubValue, in: 0...max(1, player.duration), onEditingChanged: { editing in
                         isScrubbing = editing
@@ -274,6 +283,8 @@ struct ContentView: View {
                 }
 
                 HStack(spacing: 16) {
+                    Button { showQueue = true } label: { Label("Up Next", systemImage: "list.bullet") }
+                        .buttonStyle(.bordered)
                     Toggle("Keep pitch", isOn: $player.keepPitch)
                         .onChange(of: player.keepPitch) { _, _ in player.setSpeed(player.speed) }
                     Toggle("Shuffle", isOn: $player.shuffleEnabled)
@@ -386,8 +397,8 @@ struct ContentView: View {
                 .padding(.vertical, 28)
                 .listRowBackground(Color.clear)
             } else {
-                ForEach(library.allSongs, id: \.persistentID) { item in
-                    trackRow(item, queue: library.playableItems(library.allSongs))
+                ForEach(filteredSongs, id: \.persistentID) { item in
+                    trackRow(item, queue: library.playableItems(filteredSongs))
                 }
             }
         }
@@ -468,6 +479,19 @@ struct ContentView: View {
         }
         .buttonStyle(.plain)
         .disabled(item.assetURL == nil)
+        .contextMenu {
+            Button { player.addToQueue(item, playNext: true) } label: { Label("Play Next", systemImage: "text.insert") }
+            Button { player.addToQueue(item) } label: { Label("Add to Queue", systemImage: "text.append") }
+            Button { favorites.toggle(item) } label: { Label(favorites.contains(item) ? "Remove Favorite" : "Favorite", systemImage: favorites.contains(item) ? "heart.slash" : "heart") }
+        }
+    }
+
+    private var filteredSongs: [MPMediaItem] {
+        library.allSongs.filter { item in
+            let fields = [item.title, item.artist, item.albumTitle].compactMap { $0 }
+            let matchesText = searchText.isEmpty || fields.contains { $0.localizedCaseInsensitiveContains(searchText) }
+            return matchesText && (!favoritesOnly || favorites.contains(item))
+        }
     }
 
     private func eqSlider(index: Int, title: String) -> some View {
