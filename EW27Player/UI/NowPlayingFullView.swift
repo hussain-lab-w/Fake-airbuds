@@ -21,17 +21,19 @@ struct NowPlayingFullView: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel("Close player")
                         Spacer()
-                        Text("Now Playing").font(.headline)
+                     Text("Now Playing").font(.headline)
                         Spacer()
                         Button {
                             withAnimation(.easeInOut(duration: 0.3)) { showLyrics.toggle() }
                         } label: {
-                            Label(showLyrics ? "Artwork" : "Lyrics", systemImage: "quote.bubble")
-                                .font(.caption.weight(.semibold))
+                            Image(systemName: showLyrics ? "photo" : "quote.bubble")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 36, height: 36)
+                                .background(Circle().fill(.white.opacity(0.09)))
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .tint(.cyan)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(showLyrics ? "Show artwork" : "Show lyrics")
+
                     }
                 }
                 .padding(.horizontal, 20)
@@ -66,14 +68,15 @@ struct NowPlayingFullView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { background }
-        }
-        .preferredColorScheme(.dark)
-        .gesture(DragGesture().onEnded { value in
+                .gesture(DragGesture().onEnded { value in
+            guard !showLyrics else { return }
             if value.translation.height > 120 {
-                if !showLyrics { dismiss() }
+                dismiss()
             } else if abs(value.translation.width) > 100 {
                 value.translation.width < 0 ? player.nextTrack() : player.previousTrack()
             }
+        })
+
         })
     }
 
