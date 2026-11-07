@@ -189,8 +189,12 @@ struct ContentView: View {
                 HStack(spacing: 16) {
                     playerArtwork
                         .frame(width: 106, height: 106)
-                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
-                        .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
+                        .overlay {
+                            if !vinylMode {
+                                RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1)
+                            }
+                        }
+                        .shadow(color: vinylMode ? .clear : .black.opacity(0.28), radius: 12, y: 7)
                     .onTapGesture { showFullScreen = true }
 
                     VStack(alignment: .leading, spacing: 7) {
