@@ -322,6 +322,8 @@ struct ContentView: View {
                     Label("Preset", systemImage: "slider.horizontal.3")
                         .font(.subheadline.weight(.semibold))
                     Spacer()
+                    Toggle("EQ On", isOn: Binding(get: { player.eqEnabled }, set: { player.setEQEnabled($0) }))
+                        .labelsHidden()
                     Picker("Preset", selection: Binding(get: { player.selectedPreset }, set: { player.applyPreset($0) })) {
                         ForEach(AudioPlayer.Preset.allCases) { preset in
                             Text(preset.rawValue).tag(preset)
@@ -333,11 +335,10 @@ struct ContentView: View {
 
                 Divider().overlay(.white.opacity(0.08))
 
-                eqSlider(index: 0, title: "60 Hz")
-                eqSlider(index: 1, title: "250 Hz")
-                eqSlider(index: 2, title: "1 kHz")
-                eqSlider(index: 3, title: "4 kHz")
-                eqSlider(index: 4, title: "12 kHz")
+                EQCurveView(frequencies: [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000], gains: player.eqGains, profileName: player.activeEQProfileName)
+                ForEach(Array(zip(["31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"], 0..<10)), id: \.1) { title, index in
+                    eqSlider(index: index, title: title)
+                }
                 eqSlider(title: "Preamp", value: Binding(get: { player.preamp }, set: { player.setPreamp($0) }))
 
                 Button { player.resetEQ() } label: {

@@ -31,7 +31,9 @@ final class AudioPlayer: ObservableObject {
     @Published private(set) var duration: TimeInterval = 0
     @Published private(set) var playbackMessage: String?
     @Published private(set) var currentArtwork: UIImage?
-    @Published var eqGains: [Float] = Array(repeating: 0, count: 5)
+    @Published var eqGains: [Float] = Array(repeating: 0, count: 10)
+    @Published var eqEnabled = true
+    @Published private(set) var activeEQProfileName: String?
     @Published var preamp: Float = 0
     @Published var selectedPreset: Preset = .flat
     @Published var shuffleEnabled = false
@@ -44,7 +46,7 @@ final class AudioPlayer: ObservableObject {
     let panMixer = AVAudioMixerNode()
     let varispeed = AVAudioUnitVarispeed()
     let timePitch = AVAudioUnitTimePitch()
-    let eq = AVAudioUnitEQ(numberOfBands: 5)
+    let eq = AVAudioUnitEQ(numberOfBands: 16)
     let reverb = AVAudioUnitReverb()
     let limiter: AVAudioUnitEffect = {
         let description = AudioComponentDescription(componentType: kAudioUnitType_Effect, componentSubType: kAudioUnitSubType_PeakLimiter, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
@@ -69,7 +71,7 @@ final class AudioPlayer: ObservableObject {
     private var artworkCache: [UInt64: MPMediaItemArtwork] = [:]
     private var failedOpenCount = 0
 
-    private let bandFrequencies: [Float] = [60, 250, 1000, 4000, 12000]
+    private let bandFrequencies: [Float] = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
     private let userDefaultsKey = "ew27.eq.settings.v2"
     private let globalSpeedDefaultsKey = "ew27.speed.global.v1"
 
@@ -126,6 +128,38 @@ final class AudioPlayer: ObservableObject {
     }
 
     func resetEQ() { applyPreset(.flat) }
+
+    func setEQEnabled(_ enabled: Bool) {
+        eqEnabled = enabled
+        eq.bypass = !enabled
+    }
+
+    func clearEQProfile() {
+        activeEQProfileName = nil
+        applyPreset(.flat)
+    }
+
+    func applyEQProfile(_ profile: EQProfile) {
+        activeEQProfileName = profile.name
+        eqGains = Array(repeating: 0, count: 10)
+        preamp = profile.preamp
+        for filter in profile.filters.prefix(16) {
+            if let index = bandFrequencies.firstIndex(where: { abs($0 - filter.frequency) < max(20, filter.frequency * 0.12) }) {
+                eqGains[index] = filter.gain
+                eq.bands[index].frequency = filter.frequency
+                eq.bands[index].bandwidth = filter.bandwidth
+                eq.bands[index].filterType = filter.kind == .lowShelf ? .lowShelf : (filter.kind == .highShelf ? .highShelf : .parametric)
+            }
+        }
+        applyEQSettings()
+        saveSettingsForCurrentRoute()
+    }
+
+    func importEQProfile(text: String, name: String) -> EQProfile? {
+        guard let profile = AutoEQParser.parse(text, name: name) else { return nil }
+        applyEQProfile(profile)
+        return profile
+    }
 
     func play(_ item: MPMediaItem, queue newQueue: [MPMediaItem]) {
         let playable = newQueue.filter { $0.assetURL != nil }
@@ -222,6 +256,7 @@ final class AudioPlayer: ObservableObject {
             band.bypass = false
             band.filterType = index == 0 ? .lowShelf : (index == bandFrequencies.count - 1 ? .highShelf : .parametric)
         }
+        for index in 10..<eq.bands.count { eq.bands[index].bypass = true }
         limiter.auAudioUnit.shouldBypassEffect = false
         timePitch.pitch = 0
         reverb.wetDryMix = 0
@@ -459,10 +494,10 @@ final class AudioPlayer: ObservableObject {
 
     private func loadSettingsForCurrentRoute() {
         if let settings = storedSettings()[routeKey()] {
-            eqGains = settings.gains.count == 5 ? settings.gains : Array(repeating: 0, count: 5)
+            eqGains = settings.gains.count == 10 ? settings.gains : migrateGains(settings.gains)
             preamp = settings.globalGain
             selectedPreset = settings.preset
-        } else { eqGains = [0, 0, 0, 0, 0]; preamp = 0; selectedPreset = .flat }
+        } else { eqGains = Array(repeating: 0, count: 10); preamp = 0; selectedPreset = .flat }
         applyEQSettings()
     }
 
@@ -474,6 +509,13 @@ final class AudioPlayer: ObservableObject {
 
     private func applyEQSettings() {
         for index in eq.bands.indices where index < eqGains.count { eq.bands[index].gain = eqGains[index]; eq.bands[index].bypass = false }
+        for index in 10..<eq.bands.count { eq.bands[index].bypass = true }
         eq.globalGain = preamp
+        eq.bypass = !eqEnabled
+    }
+
+    private func migrateGains(_ old: [Float]) -> [Float] {
+        guard old.count == 5 else { return Array(repeating: 0, count: 10) }
+        return [old[0], old[0], old[1], old[1], old[2], old[2], old[3], old[3], old[4], old[4]]
     }
 }
