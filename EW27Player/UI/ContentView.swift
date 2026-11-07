@@ -24,15 +24,6 @@ struct ContentView: View {
             soundTab
         }
         .tint(Color(red: 0.38, green: 0.78, blue: 1))
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if player.currentItem != nil {
-                miniPlayer
-                    .padding(.horizontal, 14)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
-                    .background(.clear)
-            }
-        }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
         .onChange(of: player.elapsed) { _, value in
             if !isScrubbing { scrubValue = value }
@@ -101,12 +92,20 @@ struct ContentView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(Color(red: 0.035, green: 0.055, blue: 0.12), for: .navigationBar)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if player.currentItem != nil && selectedTab != .player {
+                    miniPlayer
+                        .padding(.horizontal, 14)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
+                }
+            }
     }
 
     private var miniPlayer: some View {
         HStack(spacing: 12) {
             Group {
-                if let artwork = player.currentItem?.artwork?.image(at: CGSize(width: 96, height: 96)) {
+                if let artwork = ArtworkCache.shared.image(for: player.currentItem?.persistentID ?? 0, artwork: player.currentItem?.artwork, size: CGSize(width: 96, height: 96)) {
                     Image(uiImage: artwork).resizable().scaledToFill()
                 } else {
                     ZStack {
@@ -169,7 +168,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 16) {
                     Group {
-                        if let artwork = player.currentItem?.artwork?.image(at: CGSize(width: 240, height: 240)) {
+                        if let artwork = player.currentArtwork {
                             Image(uiImage: artwork)
                                 .resizable()
                                 .scaledToFill()
@@ -191,6 +190,7 @@ struct ContentView: View {
                         Text(player.currentItem?.title ?? "No track selected")
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                             .minimumScaleFactor(0.82)
                         Text(player.currentItem?.artist ?? "")
                             .font(.subheadline)
@@ -434,7 +434,7 @@ struct ContentView: View {
         } label: {
             HStack(spacing: 12) {
                 Group {
-                    if let artwork = item.artwork?.image(at: CGSize(width: 120, height: 120)) {
+                    if let artwork = ArtworkCache.shared.image(for: item.persistentID, artwork: item.artwork, size: CGSize(width: 120, height: 120)) {
                         Image(uiImage: artwork).resizable().scaledToFill()
                     } else {
                         ZStack {

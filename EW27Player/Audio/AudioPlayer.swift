@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import MediaPlayer
+import UIKit
 
 @MainActor
 final class AudioPlayer: ObservableObject {
@@ -29,6 +30,7 @@ final class AudioPlayer: ObservableObject {
     @Published private(set) var elapsed: TimeInterval = 0
     @Published private(set) var duration: TimeInterval = 0
     @Published private(set) var playbackMessage: String?
+    @Published private(set) var currentArtwork: UIImage?
     @Published var eqGains: [Float] = Array(repeating: 0, count: 5)
     @Published var preamp: Float = 0
     @Published var selectedPreset: Preset = .flat
@@ -260,6 +262,7 @@ final class AudioPlayer: ObservableObject {
             let file = try AVAudioFile(forReading: url)
             audioFile = file
             currentItem = item
+            currentArtwork = item.artwork?.image(at: CGSize(width: 240, height: 240))
             duration = TimeInterval(file.length) / file.processingFormat.sampleRate
             trackOffset = max(0, min(duration, startTime))
             rebuildGraph(format: file.processingFormat)
