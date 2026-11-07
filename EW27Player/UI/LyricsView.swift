@@ -35,6 +35,8 @@ struct LyricsView: View {
             return lyrics.hasWordTiming ? "LRCLIB · word-synced" : "LRCLIB · word timing estimated"
         case .netease:
             return lyrics.hasWordTiming ? "NetEase · word-synced" : "NetEase · line-synced"
+        case .appleMusic:
+            return lyrics.hasWordTiming ? "Apple Music · word-synced" : "Apple Music · line-synced"
         case .lyricsOvh:
             return "Lyrics.ovh · unsynced"
         case .imported:

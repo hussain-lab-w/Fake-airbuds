@@ -9,6 +9,7 @@ struct LyricsProviderClient {
     static func lookup(title: String, artist: String, album: String, duration: Int) async -> [Result] {
         await withTaskGroup(of: Result?.self, returning: [Result].self) { group in
             group.addTask { await netease(title: title, artist: artist, duration: duration) }
+            group.addTask { await appleMusic(title: title, artist: artist, duration: duration) }
             group.addTask { await lyricsOvh(title: title, artist: artist) }
             var results: [Result] = []
             for await result in group {
@@ -42,6 +43,12 @@ struct LyricsProviderClient {
             return nil
         } catch { }
         return nil
+    }
+
+
+    private static func appleMusic(title: String, artist: String, duration: Int) async -> Result? {
+        guard let lyrics = await AppleMusicLyricsProvider.lookup(title: title, artist: artist, duration: duration) else { return nil }
+        return Result(lyrics: lyrics, definitiveMiss: false)
     }
 
     private static func lyricsOvh(title: String, artist: String) async -> Result? {
