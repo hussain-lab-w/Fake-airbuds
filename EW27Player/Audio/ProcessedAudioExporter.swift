@@ -31,7 +31,7 @@ final class ProcessedAudioExporter {
         else if player.reverbMode == "Room" { reverb.loadFactoryPreset(.mediumRoom) }
         let renderFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sourceFormat.sampleRate, channels: sourceFormat.channelCount, interleaved: false)!
         try engine.enableManualRenderingMode(.offline, format: renderFormat, maximumFrameCount: 4096)
-        node.scheduleFile(file, at: nil)
+        try node.scheduleFile(file, at: nil)
         try engine.start()
         node.play()
         let base = FileManager.default.temporaryDirectory.appendingPathComponent("EW27-Processed-\(UUID().uuidString)")
@@ -43,13 +43,11 @@ final class ProcessedAudioExporter {
         var rendered = 0
         while rendered < total || node.isPlaying {
             let frames = AVAudioFrameCount(min(4096, max(1, total - rendered)))
-            switch engine.renderOffline(frames, to: buffer) {
+            switch try engine.renderOffline(frames, to: buffer) {
             case .success:
                 try output.write(from: buffer)
                 rendered += Int(buffer.frameLength)
                 progress(min(1, Double(rendered) / Double(total)))
-            case .insufficientData:
-                rendered = total
             case .cannotDoInCurrentContext:
                 continue
             case .error:
