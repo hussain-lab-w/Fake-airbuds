@@ -53,6 +53,12 @@ final class AudioPlayer: ObservableObject {
         set { clock.duration = newValue }
     }
 
+    func lyricPlaybackTime(at date: Date = Date()) -> TimeInterval {
+        guard isPlaying, !isSeeking else { return elapsed }
+        let elapsedSinceUpdate = max(0, date.timeIntervalSince(lastProgressDate))
+        return min(duration, max(0, elapsed + elapsedSinceUpdate * Double(speed)))
+    }
+
     var speed: Float {
         get { speedState.displayed }
         set { speedState.displayed = newValue }

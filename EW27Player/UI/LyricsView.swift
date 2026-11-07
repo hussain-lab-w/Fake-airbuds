@@ -170,8 +170,8 @@ struct LyricsView: View {
 
     private func syncedContent(_ lines: [LyricLine]) -> some View {
         GeometryReader { geo in
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { _ in
-                let time = player.clock.elapsed + store.syncOffset
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !player.isPlaying)) { context in
+                let time = player.lyricPlaybackTime(at: context.date) + store.syncOffset
                 let state = playbackState(lines: lines, time: time)
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
@@ -536,15 +536,18 @@ private struct LyricsTransportBar: View {
     @ObservedObject var clock: PlaybackClock
     @State private var scrubFraction: Double?
 
-    private var fraction: Double {
+    private func fraction(at elapsed: TimeInterval) -> Double {
         guard clock.duration > 0 else { return 0 }
-        return min(1, max(0, clock.elapsed / clock.duration))
+        return min(1, max(0, elapsed / clock.duration))
     }
 
     var body: some View {
-        VStack(spacing: 6) {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !player.isPlaying)) { context in
+            let elapsed = player.lyricPlaybackTime(at: context.date)
+            let currentFraction = fraction(at: elapsed)
+            VStack(spacing: 6) {
             GeometryReader { geo in
-                let shown = scrubFraction ?? fraction
+                let shown = scrubFraction ?? currentFraction
                 ZStack(alignment: .leading) {
                     Capsule().fill(.white.opacity(0.18))
                     Capsule().fill(.white.opacity(0.9)).frame(width: max(4, geo.size.width * shown))
@@ -567,9 +570,9 @@ private struct LyricsTransportBar: View {
             .frame(height: 22)
 
             HStack {
-                Text(formatTime(scrubFraction.map { $0 * clock.duration } ?? clock.elapsed))
+                Text(formatTime(scrubFraction.map { $0 * clock.duration } ?? elapsed))
                 Spacer()
-                Text("-" + formatTime(max(0, clock.duration - (scrubFraction.map { $0 * clock.duration } ?? clock.elapsed))))
+                Text("-" + formatTime(max(0, clock.duration - (scrubFraction.map { $0 * clock.duration } ?? elapsed))))
             }
             .font(.system(size: 11, weight: .medium).monospacedDigit())
             .foregroundStyle(.white.opacity(0.6))
@@ -594,6 +597,7 @@ private struct LyricsTransportBar: View {
         .padding(.vertical, 12)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
+        }
     }
 
     private func formatTime(_ value: TimeInterval) -> String {
