@@ -326,7 +326,7 @@ final class AudioPlayer: ObservableObject {
         engine.connect(reverb, to: limiter, format: format)
         engine.connect(limiter, to: panMixer, format: format)
         engine.connect(panMixer, to: engine.mainMixerNode, format: format)
-        spectrumAnalyzer.install(on: engine.mainMixerNode)
+        spectrumAnalyzer.install(on: engine.mainMixerNode, model: spectrumModel)
         applyEQSettings()
         applyPlaybackRate()
     }
@@ -429,7 +429,6 @@ final class AudioPlayer: ObservableObject {
 
     private func updateProgress() {
         guard isPlaying, !isSeeking else { return }
-        spectrumModel.bars = spectrumAnalyzer.bars
         let now = Date()
         elapsed = min(duration, elapsed + now.timeIntervalSince(lastProgressDate) * Double(speed))
         lastProgressDate = now
