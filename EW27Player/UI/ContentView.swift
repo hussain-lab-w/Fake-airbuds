@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var favoritesOnly = false
     @AppStorage("ew27.vinyl.enabled") private var vinylMode = false
+    @State private var showFullScreen = false
 
     private let speedPresets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -31,6 +32,7 @@ struct ContentView: View {
         .tint(Color(red: 0.38, green: 0.78, blue: 1))
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
         .sheet(isPresented: $showQueue) { QueueView(player: player) }
+        .sheet(isPresented: $showFullScreen) { NowPlayingFullView(player: player) }
         .preferredColorScheme(.dark)
     }
 
@@ -86,8 +88,9 @@ struct ContentView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background {
+                let tint = player.artworkTint.map { Color(uiColor: $0) } ?? Color(red: 0.035, green: 0.055, blue: 0.12)
                 LinearGradient(
-                    colors: [Color(red: 0.035, green: 0.055, blue: 0.12), Color(red: 0.075, green: 0.07, blue: 0.17), Color(red: 0.025, green: 0.04, blue: 0.095)],
+                    colors: [tint.opacity(0.75), Color(red: 0.075, green: 0.07, blue: 0.17), Color(red: 0.025, green: 0.04, blue: 0.095)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ).ignoresSafeArea()
@@ -98,6 +101,7 @@ struct ContentView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(Color(red: 0.035, green: 0.055, blue: 0.12), for: .navigationBar)
+            .animation(.easeInOut(duration: 0.6), value: player.currentItem?.persistentID)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if player.currentItem != nil && selectedTab != .player {
                     miniPlayer
@@ -161,6 +165,8 @@ struct ContentView: View {
             .padding(.bottom, 6)
         }
         .shadow(color: .black.opacity(0.32), radius: 14, y: 7)
+        .contentShape(Rectangle())
+        .onTapGesture { showFullScreen = true }
     }
 
     private var playerSection: some View {
@@ -188,6 +194,7 @@ struct ContentView: View {
                     .frame(width: 106, height: 106)
                     .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
                     .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
+                    .onTapGesture { showFullScreen = true }
 
                     VStack(alignment: .leading, spacing: 7) {
                         Text(player.currentItem?.title ?? "No track selected")
@@ -263,7 +270,7 @@ struct ContentView: View {
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                LinearGradient(colors: [Color(red: 0.10, green: 0.15, blue: 0.27), Color(red: 0.09, green: 0.10, blue: 0.21)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                LinearGradient(colors: [player.artworkTint.map { Color(uiColor: $0) } ?? Color(red: 0.10, green: 0.15, blue: 0.27), Color(red: 0.09, green: 0.10, blue: 0.21)], startPoint: .topLeading, endPoint: .bottomTrailing),
                 in: RoundedRectangle(cornerRadius: 26, style: .continuous)
             )
             .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))

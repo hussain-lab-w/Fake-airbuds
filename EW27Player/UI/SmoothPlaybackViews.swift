@@ -22,8 +22,6 @@ struct PlaybackControlsView: View {
     @ObservedObject var clock: PlaybackClock
     @ObservedObject var speedState: SpeedState
     @ObservedObject var spectrum: SpectrumModel
-    @State private var scrubValue: Double = 0
-    @State private var scrubbing = false
     @State private var speedValue: Double = 1
     @State private var speedDragging = false
 
@@ -32,20 +30,14 @@ struct PlaybackControlsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             SpectrumView(bars: spectrum.bars)
-            VStack(spacing: 2) {
-                Slider(value: $scrubValue, in: 0...max(1, clock.duration), onEditingChanged: { editing in
-                    scrubbing = editing
-                    if !editing { player.seek(to: scrubValue) }
-                })
-                .tint(.cyan)
-                HStack {
-                    Text(formatTime(scrubbing ? scrubValue : clock.elapsed))
-                    Spacer()
-                    Text(formatTime(clock.duration))
-                }
-                .font(.caption2.monospacedDigit().weight(.medium))
-                .foregroundStyle(.white.opacity(0.58))
+            WaveformView(store: player.waveformStore, clock: clock) { player.seek(to: $0) }
+            HStack {
+                Text(formatTime(clock.elapsed))
+                Spacer()
+                Text(formatTime(clock.duration))
             }
+            .font(.caption2.monospacedDigit().weight(.medium))
+            .foregroundStyle(.white.opacity(0.58))
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Label("Speed", systemImage: "speedometer").font(.subheadline.weight(.semibold))
@@ -73,8 +65,7 @@ struct PlaybackControlsView: View {
                 .tint(.cyan)
             }
         }
-        .onChange(of: clock.elapsed) { _, value in if !scrubbing { scrubValue = value } }
-        .onAppear { scrubValue = clock.elapsed; speedValue = Double(speedState.displayed) }
+        .onAppear { speedValue = Double(speedState.displayed) }
     }
 
     private func formatTime(_ value: TimeInterval) -> String {

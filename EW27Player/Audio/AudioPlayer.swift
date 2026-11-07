@@ -29,6 +29,7 @@ final class AudioPlayer: ObservableObject {
     @Published private(set) var routeName = noRoute
     @Published private(set) var playbackMessage: String?
     @Published private(set) var currentArtwork: UIImage?
+    @Published private(set) var artworkTint: UIColor?
     @Published var eqGains: [Float] = Array(repeating: 0, count: 10)
     @Published var eqEnabled = true
     @Published private(set) var activeEQProfileName: String?
@@ -71,6 +72,7 @@ final class AudioPlayer: ObservableObject {
         return AVAudioUnitEffect(audioComponentDescription: description)
     }()
     let spectrumAnalyzer = SpectrumAnalyzer()
+    let waveformStore = WaveformStore()
 
     private var audioFile: AVAudioFile?
     private var generation = 0
@@ -381,6 +383,8 @@ final class AudioPlayer: ObservableObject {
             audioFile = file
             currentItem = item
             currentArtwork = item.artwork?.image(at: CGSize(width: 240, height: 240))
+            artworkTint = ArtworkCache.shared.averageColor(for: currentArtwork)
+            waveformStore.load(url: url, persistentID: item.persistentID)
             duration = TimeInterval(file.length) / file.processingFormat.sampleRate
             trackOffset = max(0, min(duration, startTime))
             rebuildGraph(format: file.processingFormat)
