@@ -6,6 +6,7 @@ import Accelerate
 final class WaveformStore: ObservableObject {
     @Published private(set) var peaks: [Float] = []
     @Published private(set) var envelope: [Float] = []
+    @Published private(set) var bpm: Double?
     @Published private(set) var isLoading = false
 
     private var task: Task<Void, Never>?
@@ -15,13 +16,14 @@ final class WaveformStore: ObservableObject {
         task?.cancel()
         peaks = []
         envelope = []
+        bpm = nil
         guard let url else { return }
         if let cached = memory[persistentID] {
-            peaks = cached.0; envelope = cached.1; return
+            peaks = cached.0; envelope = cached.1; bpm = BPMDetector.estimate(envelope: cached.1); return
         }
         if let cached = readDisk(persistentID: persistentID) {
             memory[persistentID] = cached
-            peaks = cached.0; envelope = cached.1; return
+            peaks = cached.0; envelope = cached.1; bpm = BPMDetector.estimate(envelope: cached.1); return
         }
         isLoading = true
         task = Task.detached(priority: .utility) { [weak self] in
@@ -31,6 +33,7 @@ final class WaveformStore: ObservableObject {
                 self.memory[persistentID] = result
                 self.peaks = result.0
                 self.envelope = result.1
+                self.bpm = BPMDetector.estimate(envelope: result.1)
                 self.isLoading = false
                 self.writeDisk(result, persistentID: persistentID)
             }

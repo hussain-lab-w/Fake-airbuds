@@ -22,8 +22,10 @@ struct PlaybackControlsView: View {
     @ObservedObject var clock: PlaybackClock
     @ObservedObject var speedState: SpeedState
     @ObservedObject var spectrum: SpectrumModel
+    @ObservedObject var waveform: WaveformStore
     @State private var speedValue: Double = 1
     @State private var speedDragging = false
+    @State private var targetBPM: Double = 128
 
     private let presets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -31,6 +33,16 @@ struct PlaybackControlsView: View {
         VStack(alignment: .leading, spacing: 12) {
             SpectrumView(bars: spectrum.bars)
             WaveformView(store: player.waveformStore, clock: clock) { player.seek(to: $0) }
+            if let bpm = waveform.bpm {
+                HStack {
+                    Text(String(format: "~%.0f BPM (est.)", bpm))
+                    Spacer()
+                    Stepper("Target BPM \(Int(targetBPM))", value: $targetBPM, in: 70...170, step: 1)
+                        .onChange(of: targetBPM) { _, value in player.setSpeed(Float(value / bpm)) }
+                }
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.cyan)
+            }
             HStack {
                 Text(formatTime(clock.elapsed))
                 Spacer()

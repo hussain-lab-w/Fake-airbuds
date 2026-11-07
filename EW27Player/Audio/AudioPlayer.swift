@@ -37,6 +37,7 @@ final class AudioPlayer: ObservableObject {
     @Published var selectedPreset: Preset = .flat
     @Published var shuffleEnabled = false
     @Published var keepPitch = false
+    @Published var normalizeLoudness = false
 
     let clock = PlaybackClock()
     let speedState = SpeedState()
@@ -73,6 +74,7 @@ final class AudioPlayer: ObservableObject {
     }()
     let spectrumAnalyzer = SpectrumAnalyzer()
     let waveformStore = WaveformStore()
+    let brakeController = BrakeController()
 
     private var audioFile: AVAudioFile?
     private var generation = 0
@@ -218,11 +220,14 @@ final class AudioPlayer: ObservableObject {
     }
 
     func pause() {
-        playerNode.pause()
-        isPlaying = false
-        lastProgressDate = Date()
-        updateNowPlaying()
-        persistSession()
+        brakeController.rampDown { [weak self] in
+            guard let self else { return }
+            self.playerNode.pause()
+            self.isPlaying = false
+            self.lastProgressDate = Date()
+            self.updateNowPlaying()
+            self.persistSession()
+        }
     }
 
     func nextTrack() {
@@ -322,6 +327,17 @@ final class AudioPlayer: ObservableObject {
 
     func setSpectrumEnabled(_ enabled: Bool) { spectrumAnalyzer.setEnabled(enabled) }
 
+    func setNormalizeLoudness(_ enabled: Bool) {
+        normalizeLoudness = enabled
+        guard enabled, let item = currentItem, let url = item.assetURL else { applyLoudnessGain(0); return }
+        LoudnessNormalizer.gain(for: url, persistentID: item.persistentID) { [weak self] gain in self?.applyLoudnessGain(gain) }
+    }
+
+    private func applyLoudnessGain(_ gain: Float) {
+        guard let unit = limiter.audioUnit else { return }
+        _ = AudioUnitSetParameter(unit, 0, kAudioUnitScope_Global, 0, gain, 0)
+    }
+
     private func configureAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
@@ -385,6 +401,9 @@ final class AudioPlayer: ObservableObject {
             currentArtwork = item.artwork?.image(at: CGSize(width: 240, height: 240))
             artworkTint = ArtworkCache.shared.averageColor(for: currentArtwork)
             waveformStore.load(url: url, persistentID: item.persistentID)
+            if normalizeLoudness {
+                LoudnessNormalizer.gain(for: url, persistentID: item.persistentID) { [weak self] gain in self?.applyLoudnessGain(gain) }
+            }
             duration = TimeInterval(file.length) / file.processingFormat.sampleRate
             trackOffset = max(0, min(duration, startTime))
             rebuildGraph(format: file.processingFormat)
@@ -421,6 +440,7 @@ final class AudioPlayer: ObservableObject {
         guard currentItem != nil else { return }
         do {
             if !engine.isRunning { try engine.start() }
+            brakeController.rampUp()
             playerNode.play()
             isPlaying = true
             hasFinished = false
@@ -482,7 +502,7 @@ final class AudioPlayer: ObservableObject {
     }
 
     private func applyPlaybackRate() {
-        let rate = max(0.25, min(4, speed))
+        let rate = max(0.25, min(4, speed * brakeController.factor))
         if keepPitch { varispeed.rate = 1; timePitch.rate = rate }
         else { varispeed.rate = rate; timePitch.rate = 1 }
     }
