@@ -10,7 +10,7 @@ final class LoudnessNormalizer {
         lock.lock(); let cached = cache[persistentID]; lock.unlock()
         if let cached { completion(cached); return }
         DispatchQueue.global(qos: .utility).async {
-            let result = analyze(url: url)
+            let result = analyze(url)
             lock.lock(); cache[persistentID] = result; lock.unlock()
             DispatchQueue.main.async { completion(result) }
         }

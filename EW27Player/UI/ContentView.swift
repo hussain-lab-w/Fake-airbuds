@@ -169,31 +169,28 @@ struct ContentView: View {
         .onTapGesture { showFullScreen = true }
     }
 
+    @ViewBuilder
+    private var playerArtwork: some View {
+        if vinylMode {
+            VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
+        } else if let artwork = player.currentArtwork {
+            Image(uiImage: artwork).resizable().scaledToFill().clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        } else {
+            ZStack {
+                LinearGradient(colors: [Color.cyan.opacity(0.75), Color.blue.opacity(0.38), Color.purple.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                Image(systemName: "waveform").font(.system(size: 38, weight: .medium)).foregroundStyle(.white.opacity(0.92))
+            }.clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+    }
+
     private var playerSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 16) {
-                    Group {
-                        if vinylMode {
-                            VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
-                        } else if let artwork = player.currentArtwork {
-                            Image(uiImage: artwork)
-                                .resizable()
-                                .scaledToFill()
-                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        } else {
-                            ZStack {
-                                LinearGradient(colors: [Color.cyan.opacity(0.75), Color.blue.opacity(0.38), Color.purple.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                Image(systemName: "waveform")
-                                    .font(.system(size: 38, weight: .medium))
-                                    .foregroundStyle(.white.opacity(0.92))
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        }
-                    }
-                    .frame(width: 106, height: 106)
-                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
-                    .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
+                    playerArtwork
+                        .frame(width: 106, height: 106)
+                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
                     .onTapGesture { showFullScreen = true }
 
                     VStack(alignment: .leading, spacing: 7) {
@@ -242,7 +239,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
 
-                PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel)
+                PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
 
                 HStack(spacing: 16) {
                     Button { showQueue = true } label: { Label("Up Next", systemImage: "list.bullet") }

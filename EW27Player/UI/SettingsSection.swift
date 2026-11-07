@@ -12,7 +12,7 @@ struct SettingsSection: View {
             Toggle("Haptics", isOn: $hapticsEnabled)
             Toggle("Reset speed to 1x on launch", isOn: $resetSpeedOnLaunch)
             Toggle("Vinyl mode", isOn: $vinylEnabled)
-            Picker("Brake on pause", selection: $player.brakeController.mode) {
+            Picker("Brake on pause", selection: Binding(get: { player.brakeMode }, set: { player.setBrakeMode($0) })) {
                 ForEach(BrakeController.Mode.allCases) { mode in Text(mode.rawValue).tag(mode) }
             }
             Toggle("Spectrum analyzer", isOn: Binding(get: { spectrumEnabled }, set: { value in spectrumEnabled = value; player.setSpectrumEnabled(value) }))

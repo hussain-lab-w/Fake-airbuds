@@ -327,6 +327,10 @@ final class AudioPlayer: ObservableObject {
 
     func setSpectrumEnabled(_ enabled: Bool) { spectrumAnalyzer.setEnabled(enabled) }
 
+    var brakeMode: BrakeController.Mode { brakeController.mode }
+
+    func setBrakeMode(_ mode: BrakeController.Mode) { brakeController.mode = mode }
+
     func setNormalizeLoudness(_ enabled: Bool) {
         normalizeLoudness = enabled
         guard enabled, let item = currentItem, let url = item.assetURL else { applyLoudnessGain(0); return }
@@ -334,7 +338,7 @@ final class AudioPlayer: ObservableObject {
     }
 
     private func applyLoudnessGain(_ gain: Float) {
-        guard let unit = limiter.audioUnit else { return }
+        let unit = limiter.audioUnit
         _ = AudioUnitSetParameter(unit, 0, kAudioUnitScope_Global, 0, gain, 0)
     }
 
