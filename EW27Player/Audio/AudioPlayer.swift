@@ -31,6 +31,7 @@ final class AudioPlayer: ObservableObject {
     @Published private(set) var playbackMessage: String?
     @Published private(set) var currentArtwork: UIImage?
     @Published private(set) var artworkTint: UIColor?
+    @Published private(set) var audioQualityLabel = "Local audio"
     @Published var eqGains: [Float] = Array(repeating: 0, count: 10)
     @Published var eqEnabled = true
     @Published private(set) var activeEQProfileName: String?
@@ -439,6 +440,7 @@ final class AudioPlayer: ObservableObject {
                 LoudnessNormalizer.gain(for: url, persistentID: item.persistentID) { [weak self] gain in self?.applyLoudnessGain(gain) }
             }
             duration = TimeInterval(file.length) / file.processingFormat.sampleRate
+            audioQualityLabel = Self.qualityLabel(for: file.processingFormat)
             lyricsStore.load(for: item, duration: duration)
             trackOffset = max(0, min(duration, startTime))
             rebuildGraph(format: file.processingFormat)
@@ -655,6 +657,18 @@ final class AudioPlayer: ObservableObject {
         for index in 10..<eq.bands.count { eq.bands[index].bypass = true }
         eq.globalGain = preamp
         eq.bypass = !eqEnabled
+    }
+
+    private static func qualityLabel(for format: AVAudioFormat) -> String {
+        let rate = Int(format.sampleRate.rounded())
+        let rateText: String
+        switch rate {
+        case 88_000...: rateText = "88.2kHz+"
+        case 48_000...: rateText = "48kHz"
+        default: rateText = "44.1kHz"
+        }
+        let channels = format.channelCount == 1 ? "Mono" : "Stereo"
+        return "\(rateText) · \(channels)"
     }
 
     private func migrateGains(_ old: [Float]) -> [Float] {

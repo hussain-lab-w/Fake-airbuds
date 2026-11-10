@@ -5,6 +5,7 @@ struct NowPlayingFullView: View {
     @ObservedObject var player: AudioPlayer
     @Environment(\.dismiss) private var dismiss
     @State private var showLyrics = false
+    @State private var showQueue = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -56,6 +57,7 @@ struct NowPlayingFullView: View {
                                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                             SpectrumView(bars: player.spectrumModel.bars)
                             Text(String(format: "Speed %.2fx", player.speed)).font(.subheadline.weight(.semibold)).foregroundStyle(.cyan)
+                            PlayerInspector(player: player) { showQueue = true }
                         }
                         .frame(width: max(0, geometry.size.width - 40), alignment: .top)
                         .padding(.horizontal, 20)
@@ -67,6 +69,7 @@ struct NowPlayingFullView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .sheet(isPresented: $showQueue) { QueueView(player: player) }
             .background { background }
                 .gesture(DragGesture().onEnded { value in
             guard !showLyrics else { return }
