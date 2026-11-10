@@ -11,6 +11,7 @@ struct RebuiltRootView: View {
     @State private var favoritesOnly = false
     @State private var showQueue = false
     @State private var showFullPlayer = false
+    @State private var showLyrics = false
     @State private var vinylEnabled = false
 
     private enum RootTab: String, CaseIterable {
@@ -24,21 +25,26 @@ struct RebuiltRootView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
-            Group {
-                switch tab {
-                case .player: playerDashboard
-                case .library: libraryDashboard
-                case .sound: soundDashboard
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
+                Group {
+                    switch tab {
+                    case .player: playerDashboard
+                    case .library: libraryDashboard
+                    case .sound: soundDashboard
+                    }
                 }
+                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+                .clipped()
+                .safeAreaPadding(.bottom, 74)
+                bottomBar.frame(width: geometry.size.width)
             }
-            .safeAreaPadding(.bottom, 74)
-            bottomBar
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showQueue) { QueueView(player: player) }
         .sheet(isPresented: $showFullPlayer) { NowPlayingFullView(player: player) }
+        .sheet(isPresented: $showLyrics) { LyricsView(player: player, store: player.lyricsStore) }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
     }
 
@@ -50,6 +56,25 @@ struct RebuiltRootView: View {
                 trackTitle
                 PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
                 PlayerInspector(player: player) { showQueue = true }
+                Button { showLyrics = true } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "quote.bubble.fill")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Live Lyrics").font(.subheadline.weight(.bold))
+                            Text(player.lyricsStore.lyrics?.hasWordTiming == true ? "Word-by-word synced" : "Open synchronized lyrics")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                    .overlay { RoundedRectangle(cornerRadius: 17, style: .continuous).stroke(.white.opacity(0.12), lineWidth: 1) }
+                }
+                .buttonStyle(.plain)
                 playerToggles
                 if let message = player.playbackMessage {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
@@ -60,6 +85,7 @@ struct RebuiltRootView: View {
             .padding(.horizontal, 18)
             .padding(.top, 14)
             .padding(.bottom, 20)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -191,6 +217,7 @@ struct RebuiltRootView: View {
             .padding(.horizontal, 18)
             .padding(.top, 16)
             .padding(.bottom, 22)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -265,6 +292,7 @@ struct RebuiltRootView: View {
             .padding(.horizontal, 18)
             .padding(.top, 16)
             .padding(.bottom, 24)
+            .frame(maxWidth: .infinity)
         }
     }
 
