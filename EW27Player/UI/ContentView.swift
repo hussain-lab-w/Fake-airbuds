@@ -84,16 +84,11 @@ struct ContentView: View {
     }
 
     private func appList<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        List { content() }
+            List { content() }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background {
-                let tint = player.artworkTint.map { Color(uiColor: $0) } ?? Color(red: 0.035, green: 0.055, blue: 0.12)
-                LinearGradient(
-                    colors: [tint.opacity(0.75), Color(red: 0.075, green: 0.07, blue: 0.17), Color(red: 0.025, green: 0.04, blue: 0.095)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ).ignoresSafeArea()
+                ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
             }
             .listRowBackground(Color.white.opacity(0.045))
             .listRowSeparatorTint(Color.white.opacity(0.08))
@@ -224,13 +219,17 @@ struct ContentView: View {
                     }
                     Spacer()
                     Button { haptic(); player.togglePlayPause() } label: {
-                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 25, weight: .bold))
-                            .offset(x: player.isPlaying ? 0 : 2)
-                            .frame(width: 72, height: 72)
-                            .background(Circle().fill(LinearGradient(colors: [Color.cyan, Color.blue], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                            .foregroundStyle(Color(red: 0.02, green: 0.08, blue: 0.16))
-                            .shadow(color: .cyan.opacity(0.28), radius: 14, y: 5)
+                        ZStack {
+                            PlaybackGlow(isActive: player.isPlaying)
+                                .frame(width: 92, height: 92)
+                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 25, weight: .bold))
+                                .offset(x: player.isPlaying ? 0 : 2)
+                                .frame(width: 72, height: 72)
+                                .background(Circle().fill(LinearGradient(colors: [Color.cyan, Color.blue], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                                .foregroundStyle(Color(red: 0.02, green: 0.08, blue: 0.16))
+                                .shadow(color: .cyan.opacity(0.28), radius: 14, y: 5)
+                        }
                     }
                     Spacer()
                     Button { haptic(); player.nextTrack() } label: {

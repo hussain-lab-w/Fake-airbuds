@@ -81,20 +81,7 @@ struct NowPlayingFullView: View {
     }
 
     private var background: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            if let artwork = player.currentArtwork {
-                Image(uiImage: artwork)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .blur(radius: 45)
-                    .opacity(0.28)
-                    .clipped()
-                    .ignoresSafeArea()
-            }
-            LinearGradient(colors: [.cyan.opacity(0.22), .blue.opacity(0.08), .black.opacity(0.72)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
-        }
+        ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
     }
 
     private var artwork: some View {
@@ -102,7 +89,15 @@ struct NowPlayingFullView: View {
             if vinylEnabled {
                 VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
             } else if let image = player.currentArtwork {
-                Image(uiImage: image).resizable().scaledToFill().clipShape(RoundedRectangle(cornerRadius: 28))
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(.white.opacity(0.22), lineWidth: 1)
+                    }
+                    .shadow(color: .black.opacity(0.42), radius: 24, y: 12)
             } else {
                 Image(systemName: "waveform").font(.system(size: 70)).frame(maxWidth: .infinity).frame(height: 280).background(.cyan.opacity(0.15), in: RoundedRectangle(cornerRadius: 28))
             }
