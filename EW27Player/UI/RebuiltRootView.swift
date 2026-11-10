@@ -190,10 +190,12 @@ struct RebuiltRootView: View {
             tab = .player
         } label: {
             HStack(spacing: 12) {
-                if let image = ArtworkCache.shared.image(for: item.persistentID, artwork: item.artwork, size: CGSize(width: 100, height: 100)) {
-                    Image(uiImage: image).resizable().scaledToFill()
-                } else {
-                    ZStack { Color.white.opacity(0.08); Image(systemName: current ? "waveform" : "music.note") }
+                Group {
+                    if let image = ArtworkCache.shared.image(for: item.persistentID, artwork: item.artwork, size: CGSize(width: 100, height: 100)) {
+                        Image(uiImage: image).resizable().scaledToFill()
+                    } else {
+                        ZStack { Color.white.opacity(0.08); Image(systemName: current ? "waveform" : "music.note") }
+                    }
                 }
                 .frame(width: 50, height: 50)
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
