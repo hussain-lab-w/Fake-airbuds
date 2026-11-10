@@ -138,47 +138,79 @@ struct RebuiltRootView: View {
     }
 
     private var libraryDashboard: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("Library").font(.system(size: 30, weight: .bold, design: .rounded))
-                Spacer()
-                Button { Task { await library.requestAccessAndLoad() } } label: {
-                    Image(systemName: "arrow.clockwise").frame(width: 38, height: 38)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("LIBRARY").font(.caption.weight(.bold)).tracking(2.2).foregroundStyle(.cyan)
+                        Text("Your music").font(.system(size: 30, weight: .bold, design: .rounded))
+                    }
+                    Spacer()
+                    Button { Task { await library.requestAccessAndLoad() } } label: {
+                        Image(systemName: "arrow.clockwise").font(.system(size: 16, weight: .bold)).frame(width: 42, height: 42)
+                    }
+                    .buttonStyle(.plain)
+                    .background(.white.opacity(0.10), in: Circle())
                 }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 18)
-            .padding(.top, 16)
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Title, artist, album", text: $search)
-                if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain) }
-            }
-            .padding(12)
-            .background(.white.opacity(0.09), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-            .padding(.horizontal, 18)
-            .padding(.vertical, 10)
-            Toggle("Favorites only", isOn: $favoritesOnly)
-                .font(.caption.weight(.semibold))
-                .tint(.cyan)
-                .padding(.horizontal, 20)
-            List {
-                Section("All Local Songs") {
-                    ForEach(filteredSongs, id: \.persistentID) { item in libraryRow(item) }
+                HStack(spacing: 9) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("Title, artist, album", text: $search)
+                    if !search.isEmpty {
+                        Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain)
+                    }
+                }
+                .padding(13)
+                .background(.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(.white.opacity(0.12), lineWidth: 1) }
+                Toggle("Favorites only", isOn: $favoritesOnly)
+                    .font(.caption.weight(.semibold))
+                    .tint(.cyan)
+                sectionTitle("All Local Songs", count: filteredSongs.count)
+                if filteredSongs.isEmpty {
+                    emptyLibraryCard
+                } else {
+                    LazyVStack(spacing: 8) {
+                        ForEach(filteredSongs, id: \.persistentID) { item in libraryRow(item) }
+                    }
                 }
                 if !library.playlists.isEmpty {
-                    Section("Playlists") {
-                        ForEach(library.playlists, id: \.persistentID) { playlist in
-                            DisclosureGroup(playlist.value(forProperty: MPMediaPlaylistPropertyName) as? String ?? "Playlist") {
+                    sectionTitle("Playlists", count: library.playlists.count)
+                    ForEach(library.playlists, id: \.persistentID) { playlist in
+                        DisclosureGroup(playlist.value(forProperty: MPMediaPlaylistPropertyName) as? String ?? "Playlist") {
+                            LazyVStack(spacing: 8) {
                                 ForEach(library.items(in: playlist), id: \.persistentID) { item in libraryRow(item) }
                             }
+                            .padding(.top, 8)
                         }
+                        .tint(.white)
+                        .padding(14)
+                        .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
                 }
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, 22)
         }
+    }
+
+    private func sectionTitle(_ title: String, count: Int) -> some View {
+        HStack {
+            Text(title).font(.headline.weight(.bold))
+            Spacer()
+            Text("\(count)").font(.caption.monospacedDigit()).foregroundStyle(.cyan)
+        }
+        .padding(.top, 3)
+    }
+
+    private var emptyLibraryCard: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "music.note.list").font(.system(size: 30)).foregroundStyle(.cyan)
+            Text(library.message ?? "No local songs found").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 34)
+        .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func libraryRow(_ item: MPMediaItem) -> some View {
@@ -220,19 +252,28 @@ struct RebuiltRootView: View {
     }
 
     private var soundDashboard: some View {
-        List {
-            Section {
-                EQConsole(player: player)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("SOUND").font(.caption.weight(.bold)).tracking(2.2).foregroundStyle(.cyan)
+                    Text("Shape your sound").font(.system(size: 30, weight: .bold, design: .rounded))
+                }
+                soundCard { EQConsole(player: player) }
+                soundCard { AudioEffectsSection(player: player) }
+                soundCard { SettingsSection(player: player) }
             }
-            AudioEffectsSection(player: player)
-            SettingsSection(player: player)
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, 24)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .overlay(alignment: .topLeading) {
-            Text("Sound").font(.system(size: 30, weight: .bold, design: .rounded)).padding(.leading, 18).padding(.top, 12)
-        }
-        .safeAreaInset(edge: .top) { Color.clear.frame(height: 50) }
+    }
+
+    private func soundCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.black.opacity(0.24), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1) }
     }
 
     private var bottomBar: some View {
