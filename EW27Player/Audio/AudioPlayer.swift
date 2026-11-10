@@ -60,7 +60,8 @@ final class AudioPlayer: ObservableObject {
             return elapsed
         }
         let reported: TimeInterval
-        if let renderTime = playerNode.lastRenderTime,
+        if engine.isRunning, playerNode.engine != nil,
+           let renderTime = playerNode.lastRenderTime,
            let playerTime = playerNode.playerTime(forNodeTime: renderTime),
            playerTime.isSampleTimeValid,
            playerTime.sampleRate > 0 {
@@ -526,6 +527,7 @@ final class AudioPlayer: ObservableObject {
         lastProgressDate = now
         if elapsed >= duration { elapsed = duration }
         let fadeDuration = min(crossfadeSeconds, duration / 2)
+        guard engine.isRunning, fxMixer.engine != nil else { return }
         if fadeDuration > 0 {
             let fadeIn = min(1, max(0, elapsed / fadeDuration))
             let fadeOut = min(1, max(0, (duration - elapsed) / fadeDuration))
