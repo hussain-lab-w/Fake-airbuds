@@ -8,7 +8,7 @@ struct EW27PlayerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RebuiltRootView()
                 .environmentObject(library)
                 .environmentObject(player)
                 .environmentObject(favorites)
