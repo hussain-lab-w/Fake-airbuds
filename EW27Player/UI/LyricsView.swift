@@ -176,14 +176,15 @@ struct LyricsView: View {
 
     private func syncedContent(_ lines: [LyricLine]) -> some View {
         GeometryReader { geo in
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !player.isPlaying)) { context in
+            let lyricRows = rows(for: lines)
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !player.isPlaying)) { context in
                 let time = player.lyricPlaybackTime(at: context.date) + store.syncOffset
                 let state = playbackState(lines: lines, time: time)
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
                         LazyVStack(alignment: .leading, spacing: 22) {
                             Color.clear.frame(height: geo.size.height * 0.38)
-                            ForEach(rows(for: lines)) { row in
+                            ForEach(lyricRows) { row in
                                 rowView(row, lines: lines, time: time, state: state)
                             }
                             Color.clear.frame(height: geo.size.height * 0.62 + 120)
@@ -558,7 +559,7 @@ private struct LyricsTransportBar: View {
     }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !player.isPlaying)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !player.isPlaying)) { context in
             let elapsed = player.lyricPlaybackTime(at: context.date)
             let currentFraction = fraction(at: elapsed)
             VStack(spacing: 6) {

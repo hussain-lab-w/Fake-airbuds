@@ -72,11 +72,11 @@ extension AudioPlayer {
         if let speed { state.panRate = max(0.03, min(1.5, speed)) }
         state.panTimer?.invalidate()
         if enabled {
-            state.panTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] timer in
+            state.panTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] timer in
                 Task { @MainActor in
                     guard let self else { timer.invalidate(); return }
                     let s = EffectsState.shared
-                    s.phase += 2 * .pi * s.panRate / 60
+                    s.phase += 2 * .pi * s.panRate / 30
                     self.panMixer.pan = Float(sin(s.phase))
                 }
             }
@@ -176,7 +176,7 @@ extension AudioPlayer {
         state.fadeTimer?.invalidate()
         let startVolume = engine.mainMixerNode.outputVolume
         let start = Date()
-        state.fadeTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] timer in
+        state.fadeTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] timer in
             Task { @MainActor in
                 guard let self else { timer.invalidate(); return }
                 let fraction = min(1, Date().timeIntervalSince(start) / 10)
