@@ -352,14 +352,11 @@ struct AudioEffectsSection: View {
                     }
                 }
             }
-            .padding(18)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(colors: [Color(red: 0.10, green: 0.15, blue: 0.27), Color(red: 0.09, green: 0.10, blue: 0.21)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-            )
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
-            .shadow(color: .black.opacity(0.20), radius: 14, y: 7)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+            .shadow(color: .black.opacity(0.14), radius: 10, y: 5)
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
             .listRowBackground(Color.clear)
         } header: {

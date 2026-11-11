@@ -12,28 +12,28 @@ struct ArtworkAuroraBackground: View {
 
     var body: some View {
         ZStack {
-            Color.black
+            Color(red: 0.025, green: 0.035, blue: 0.065)
             if let image {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    .scaleEffect(1.18)
-                    .blur(radius: 48)
-                    .opacity(0.28)
+                    .scaleEffect(1.12)
+                    .blur(radius: 58)
+                    .opacity(0.13)
                     .ignoresSafeArea()
             }
             Circle()
-                .fill(accent.opacity(0.48))
-                .frame(width: 360, height: 360)
-                .blur(radius: 70)
+                .fill(accent.opacity(0.24))
+                .frame(width: 320, height: 320)
+                .blur(radius: 76)
                 .offset(x: isAnimating ? 110 : -90, y: isAnimating ? -170 : -40)
             Circle()
-                .fill(Color.blue.opacity(0.24))
-                .frame(width: 300, height: 300)
-                .blur(radius: 75)
+                .fill(Color.blue.opacity(0.12))
+                .frame(width: 280, height: 280)
+                .blur(radius: 80)
                 .offset(x: isAnimating ? -120 : 80, y: isAnimating ? 230 : 110)
             LinearGradient(
-                colors: [accent.opacity(0.28), .black.opacity(0.14), .black.opacity(0.88)],
+                colors: [accent.opacity(0.16), .black.opacity(0.28), .black.opacity(0.90)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

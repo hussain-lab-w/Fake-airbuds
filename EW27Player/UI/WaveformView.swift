@@ -38,7 +38,7 @@ struct WaveformView: View {
                 onSeek(clock.duration * Double(ratio))
             })
         }
-        .frame(height: 44)
+        .frame(height: 32)
         .transaction { transaction in transaction.animation = nil }
     }
 }

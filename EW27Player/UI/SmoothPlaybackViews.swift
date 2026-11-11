@@ -30,7 +30,7 @@ struct PlaybackControlsView: View {
     private let presets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             SpectrumView(bars: spectrum.bars)
             WaveformView(store: player.waveformStore, clock: clock) { player.seek(to: $0) }
             if let bpm = waveform.bpm {
@@ -61,8 +61,8 @@ struct PlaybackControlsView: View {
                     ForEach(presets, id: \.self) { value in
                         Button(String(format: "%g×", value)) { player.setSpeed(value) }
                             .font(.caption.weight(.semibold))
-                            .frame(maxWidth: .infinity).padding(.vertical, 8)
-                            .background(Capsule().fill(abs(speedState.displayed - value) < 0.02 ? Color.cyan.opacity(0.22) : Color.white.opacity(0.07)))
+                            .frame(maxWidth: .infinity).padding(.vertical, 7)
+                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(abs(speedState.displayed - value) < 0.02 ? Color.cyan.opacity(0.18) : Color.white.opacity(0.055)))
                             .foregroundStyle(abs(speedState.displayed - value) < 0.02 ? .cyan : .white.opacity(0.8))
                             .buttonStyle(.plain)
                     }

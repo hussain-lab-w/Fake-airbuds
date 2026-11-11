@@ -12,8 +12,10 @@ struct ContentView: View {
     @State private var showQueue = false
     @State private var searchText = ""
     @State private var favoritesOnly = false
+    @State private var sortOption: LibrarySortOption = .title
     @AppStorage("ew27.vinyl.enabled") private var vinylMode = false
     @State private var showFullScreen = false
+    @State private var showLyrics = false
 
     private let speedPresets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -23,6 +25,13 @@ struct ContentView: View {
         case sound
     }
 
+    private enum LibrarySortOption: String, CaseIterable, Identifiable {
+        case title = "Title"
+        case artist = "Artist"
+        case album = "Album"
+        var id: String { rawValue }
+    }
+
     var body: some View {
         TabView(selection: $selectedTab) {
             playerTab
@@ -30,9 +39,12 @@ struct ContentView: View {
             soundTab
         }
         .tint(Color(red: 0.38, green: 0.78, blue: 1))
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
         .sheet(isPresented: $showQueue) { QueueView(player: player) }
         .sheet(isPresented: $showFullScreen) { NowPlayingFullView(player: player) }
+        .sheet(isPresented: $showLyrics) { LyricsView(player: player, store: player.lyricsStore) }
         .preferredColorScheme(.dark)
     }
 
@@ -57,7 +69,17 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "Title, artist, or album")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Sort by", selection: $sortOption) {
+                            ForEach(LibrarySortOption.allCases) { option in
+                                Text(option.rawValue).tag(option)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                    }
+                    .accessibilityLabel("Sort songs")
                     Button { Task { await library.requestAccessAndLoad() } } label: {
                         Image(systemName: "arrow.clockwise")
                     }
@@ -90,13 +112,13 @@ struct ContentView: View {
             .background {
                 ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
             }
-            .listRowBackground(Color.white.opacity(0.045))
-            .listRowSeparatorTint(Color.white.opacity(0.08))
+            .listRowBackground(Color.white.opacity(0.028))
+            .listRowSeparatorTint(Color.white.opacity(0.055))
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(red: 0.035, green: 0.055, blue: 0.12), for: .navigationBar)
-            .animation(.easeInOut(duration: 0.6), value: player.currentItem?.persistentID)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .animation(.easeInOut(duration: 0.24), value: player.currentItem?.persistentID)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if player.currentItem != nil && selectedTab != .player {
                     miniPlayer
@@ -180,21 +202,21 @@ struct ContentView: View {
 
     private var playerSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 12) {
                     playerArtwork
-                        .frame(width: 106, height: 106)
+                        .frame(width: 88, height: 88)
                         .overlay {
                             if !vinylMode {
-                                RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.09), lineWidth: 1)
                             }
                         }
-                        .shadow(color: vinylMode ? .clear : .black.opacity(0.28), radius: 12, y: 7)
+                        .shadow(color: vinylMode ? .clear : .black.opacity(0.18), radius: 8, y: 4)
                     .onTapGesture { showFullScreen = true }
 
                     VStack(alignment: .leading, spacing: 7) {
                         Text(player.currentItem?.title ?? "No track selected")
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                             .minimumScaleFactor(0.82)
@@ -208,24 +230,36 @@ struct ContentView: View {
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
+                    if let item = player.currentItem {
+                        let isFavorite = favorites.contains(item)
+                        Button { favorites.toggle(item) } label: {
+                            Image(systemName: isFavorite ? "heart.fill" : "heart")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(isFavorite ? Color.pink : Color.white.opacity(0.72))
+                                .frame(width: 38, height: 38)
+                                .background(Color.white.opacity(0.06), in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isFavorite ? "Remove Favorite" : "Add to Favorites")
+                    }
                 }
 
-                HStack(spacing: 22) {
+                HStack(spacing: 12) {
                     Button { player.previousTrack() } label: {
                         Image(systemName: "backward.fill")
-                            .font(.system(size: 19, weight: .semibold))
-                            .frame(width: 48, height: 48)
+                            .font(.system(size: 17, weight: .semibold))
+                            .frame(width: 42, height: 42)
                             .background(Circle().fill(.white.opacity(0.09)))
                     }
                     Spacer()
                     Button { haptic(); player.togglePlayPause() } label: {
                         ZStack {
                             PlaybackGlow(isActive: player.isPlaying)
-                                .frame(width: 92, height: 92)
+                                .frame(width: 76, height: 76)
                             Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 25, weight: .bold))
+                                .font(.system(size: 22, weight: .bold))
                                 .offset(x: player.isPlaying ? 0 : 2)
-                                .frame(width: 72, height: 72)
+                                .frame(width: 64, height: 64)
                                 .background(Circle().fill(LinearGradient(colors: [Color.cyan, Color.blue], startPoint: .topLeading, endPoint: .bottomTrailing)))
                                 .foregroundStyle(Color(red: 0.02, green: 0.08, blue: 0.16))
                                 .shadow(color: .cyan.opacity(0.28), radius: 14, y: 5)
@@ -234,8 +268,8 @@ struct ContentView: View {
                     Spacer()
                     Button { haptic(); player.nextTrack() } label: {
                         Image(systemName: "forward.fill")
-                            .font(.system(size: 19, weight: .semibold))
-                            .frame(width: 48, height: 48)
+                            .font(.system(size: 17, weight: .semibold))
+                            .frame(width: 42, height: 42)
                             .background(Circle().fill(.white.opacity(0.09)))
                     }
                 }
@@ -244,9 +278,18 @@ struct ContentView: View {
 
                 PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
 
-                HStack(spacing: 16) {
+                HStack(spacing: 8) {
                     Button { showQueue = true } label: { Label("Up Next", systemImage: "list.bullet") }
                         .buttonStyle(.bordered)
+                        .frame(maxWidth: .infinity)
+                    Button { showLyrics = true } label: { Label("Lyrics", systemImage: "quote.bubble") }
+                        .buttonStyle(.bordered)
+                        .frame(maxWidth: .infinity)
+                        .disabled(player.currentItem == nil)
+                }
+                .font(.caption.weight(.medium))
+                .tint(.cyan)
+                HStack(spacing: 10) {
                     Toggle("Keep pitch", isOn: $player.keepPitch)
                         .onChange(of: player.keepPitch) { _, _ in player.setSpeed(player.speed) }
                     Toggle("Shuffle", isOn: $player.shuffleEnabled)
@@ -261,28 +304,21 @@ struct ContentView: View {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
-                } else {
-                    Text("When a track ends, press play to restart it or use Next.")
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.52))
                 }
             }
-            .padding(18)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(colors: [player.artworkTint.map { Color(uiColor: $0) } ?? Color(red: 0.10, green: 0.15, blue: 0.27), Color(red: 0.09, green: 0.10, blue: 0.21)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
-            )
-            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
-            .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+            .shadow(color: .black.opacity(0.16), radius: 12, y: 6)
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
             .listRowBackground(Color.clear)
         } header: {
             HStack {
-                Label("Player", systemImage: "waveform")
-                    .font(.caption.weight(.bold))
-                    .tracking(1)
-                    .foregroundStyle(.cyan)
+                Text("CURRENT TRACK")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.3)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Image(systemName: player.isPlaying ? "waveform.circle.fill" : "waveform.circle")
                     .foregroundStyle(.cyan.opacity(0.75))
@@ -325,14 +361,11 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .tint(.cyan)
             }
-            .padding(18)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(colors: [Color(red: 0.10, green: 0.15, blue: 0.27), Color(red: 0.09, green: 0.10, blue: 0.21)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-            )
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
-            .shadow(color: .black.opacity(0.20), radius: 14, y: 7)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+            .shadow(color: .black.opacity(0.14), radius: 10, y: 5)
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
             .listRowBackground(Color.clear)
         } header: {
@@ -422,9 +455,9 @@ struct ContentView: View {
                         }
                     }
                 }
-                .frame(width: 48, height: 48)
-                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(.white.opacity(0.1), lineWidth: 1))
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title ?? "Untitled")
                         .font(.subheadline.weight(isCurrent ? .semibold : .medium))
@@ -452,10 +485,26 @@ struct ContentView: View {
     }
 
     private var filteredSongs: [MPMediaItem] {
-        library.allSongs.filter { item in
+        let matchingSongs = library.allSongs.filter { item in
             let fields = [item.title, item.artist, item.albumTitle].compactMap { $0 }
             let matchesText = searchText.isEmpty || fields.contains { $0.localizedCaseInsensitiveContains(searchText) }
             return matchesText && (!favoritesOnly || favorites.contains(item))
+        }
+        return matchingSongs.sorted { left, right in
+            let leftValue: String
+            let rightValue: String
+            switch sortOption {
+            case .title:
+                leftValue = left.title ?? ""
+                rightValue = right.title ?? ""
+            case .artist:
+                leftValue = left.artist ?? ""
+                rightValue = right.artist ?? ""
+            case .album:
+                leftValue = left.albumTitle ?? ""
+                rightValue = right.albumTitle ?? ""
+            }
+            return leftValue.localizedCaseInsensitiveCompare(rightValue) == .orderedAscending
         }
     }
 

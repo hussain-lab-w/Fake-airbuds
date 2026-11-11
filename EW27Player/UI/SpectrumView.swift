@@ -16,7 +16,7 @@ struct SpectrumView: View {
                 context.fill(path, with: .color(color.opacity(0.9)))
             }
         }
-        .frame(height: 68)
+        .frame(height: 40)
         .padding(.horizontal, 4)
         .drawingGroup()
         .transaction { transaction in transaction.animation = nil }
