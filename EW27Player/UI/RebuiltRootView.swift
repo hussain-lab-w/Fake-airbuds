@@ -197,7 +197,7 @@ struct RebuiltRootView: View {
                 Toggle("Favorites only", isOn: $favoritesOnly)
                     .font(.caption.weight(.semibold))
                     .tint(.cyan)
-                sectionTitle("All Local Songs", count: filteredSongs.count)
+                sectionTitle("All Songs", count: filteredSongs.count)
                 if filteredSongs.isEmpty {
                     emptyLibraryCard
                 } else {
@@ -239,7 +239,7 @@ struct RebuiltRootView: View {
     private var emptyLibraryCard: some View {
         VStack(spacing: 10) {
             Image(systemName: "music.note.list").font(.system(size: 30)).foregroundStyle(.cyan)
-            Text(library.message ?? "No local songs found").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text(library.message ?? "No songs found").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 34)
