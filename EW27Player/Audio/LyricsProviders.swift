@@ -13,7 +13,13 @@ struct LyricsProviderClient {
             group.addTask { await lyricsOvh(title: title, artist: artist) }
             var results: [Result] = []
             for await result in group {
-                if let result { results.append(result) }
+                if let result {
+                    if result.lyrics.hasWordTiming {
+                        group.cancelAll()
+                        return [result]
+                    }
+                    results.append(result)
+                }
             }
             return results
         }
@@ -27,9 +33,12 @@ struct LyricsProviderClient {
             let (data, response) = try await URLSession.shared.data(from: url)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
             let search = try JSONDecoder().decode(NetEaseSearchResponse.self, from: data)
-            let song = search.result.songs
-                .filter { abs(Double($0.duration / 1000) - Double(duration)) <= 8 || duration == 0 }
-                .min { abs(Double($0.duration / 1000) - Double(duration)) < abs(Double($1.duration / 1000) - Double(duration)) } ?? search.result.songs.first
+            let matchingSongs = search.result.songs.filter {
+                duration == 0 || abs(Double($0.duration) / 1000 - Double(duration)) <= 8
+            }
+            let song = duration > 0
+                ? matchingSongs.min { abs(Double($0.duration) / 1000 - Double(duration)) < abs(Double($1.duration) / 1000 - Double(duration)) }
+                : search.result.songs.first
             guard let song else { return nil }
             var lyricComponents = URLComponents(string: "https://music.163.com/api/song/lyric")!
             lyricComponents.queryItems = [URLQueryItem(name: "id", value: String(song.id)), URLQueryItem(name: "lv", value: "-1"), URLQueryItem(name: "kv", value: "-1"), URLQueryItem(name: "tv", value: "-1")]

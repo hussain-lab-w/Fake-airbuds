@@ -27,7 +27,6 @@ struct RebuiltRootView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottom) {
-                ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
                 Group {
                     switch tab {
                     case .player: playerDashboard
@@ -40,6 +39,13 @@ struct RebuiltRootView: View {
                 .safeAreaPadding(.bottom, 74)
                 bottomBar.frame(width: geometry.size.width)
             }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+            .background {
+                ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+            }
+            .clipped()
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showQueue) { QueueView(player: player) }

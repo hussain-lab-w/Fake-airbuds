@@ -64,9 +64,15 @@ struct AppleMusicLyricsProvider {
             let ranked = values.compactMap { value -> (String, Double)? in
                 guard let id = value["id"] as? String, let attributes = value["attributes"] as? [String: Any], let name = attributes["name"] as? String, let songArtist = attributes["artistName"] as? String else { return nil }
                 let ms = (attributes["durationInMillis"] as? NSNumber)?.doubleValue ?? 0
-                let titleScore = normalized(name) == normalized(title) ? 2 : (normalized(name).contains(normalized(title)) ? 1 : 0)
-                let artistScore = normalized(songArtist).contains(normalized(artist)) ? 2 : 0
-                let durationScore = duration > 0 && ms > 0 ? max(0, 1 - abs(ms / 1000 - Double(duration)) / 10) : 0
+                let requestedTitle = normalized(title)
+                let requestedArtist = normalized(artist)
+                guard !requestedTitle.isEmpty else { return nil }
+                let candidateTitle = normalized(name)
+                let titleScore = candidateTitle == requestedTitle ? 2 : (candidateTitle.contains(requestedTitle) ? 1 : 0)
+                let artistScore = requestedArtist.isEmpty || normalized(songArtist).contains(requestedArtist) ? 2 : 0
+                let durationDifference = ms > 0 ? abs(ms / 1000 - Double(duration)) : 0
+                guard titleScore > 0, artistScore > 0, duration <= 0 || ms <= 0 || durationDifference <= 8 else { return nil }
+                let durationScore = duration > 0 && ms > 0 ? max(0, 1 - durationDifference / 10) : 0
                 return (id, Double(titleScore + artistScore) + durationScore)
             }
             return ranked.max { $0.1 < $1.1 }?.0

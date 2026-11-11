@@ -99,8 +99,14 @@ final class LyricsStore: ObservableObject {
         let id = item.persistentID
         lookupTask = Task { [weak self] in
             guard let self else { return }
+            async let lrclibSearch = self.lookupLRCLIB(title: title, artist: artist, album: album, duration: roundedDuration)
             let additional = await LyricsProviderClient.lookup(title: title, artist: artist, album: album, duration: roundedDuration)
-            let lrclib = await self.lookupLRCLIB(title: title, artist: artist, album: album, duration: roundedDuration)
+            let lrclib: (lyrics: TrackLyrics?, definitiveMiss: Bool)
+            if additional.contains(where: { $0.lyrics.hasWordTiming }) {
+                lrclib = (nil, false)
+            } else {
+                lrclib = await lrclibSearch
+            }
             guard !Task.isCancelled, self.currentTrackID == id else { return }
             let candidates = additional.map(\.lyrics) + (lrclib.lyrics.map { [$0] } ?? [])
             let found = candidates.first(where: { $0.hasWordTiming }) ?? candidates.first(where: { $0.isSynced }) ?? candidates.first
@@ -120,12 +126,18 @@ final class LyricsStore: ObservableObject {
     }
 
     private func lookupLRCLIB(title: String, artist: String, album: String, duration: Int) async -> (lyrics: TrackLyrics?, definitiveMiss: Bool) {
-        guard let getURL = makeURL(path: "/api/get", items: [
-            URLQueryItem(name: "track_name", value: title),
-            URLQueryItem(name: "artist_name", value: artist),
-            URLQueryItem(name: "album_name", value: album),
-            URLQueryItem(name: "duration", value: String(duration))
-        ]) else { return (nil, false) }
+        var queryItems = [URLQueryItem(name: "track_name", value: title)]
+        if !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            queryItems.append(URLQueryItem(name: "artist_name", value: artist))
+        }
+        if !album.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            queryItems.append(URLQueryItem(name: "album_name", value: album))
+        }
+        if duration > 0 { queryItems.append(URLQueryItem(name: "duration", value: String(duration))) }
+        if artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return await searchLRCLIB(title: title, artist: artist, duration: duration)
+        }
+        guard let getURL = makeURL(path: "/api/get", items: queryItems) else { return (nil, false) }
         do {
             let (data, response) = try await request(getURL)
             guard let http = response as? HTTPURLResponse else { return (nil, false) }
@@ -134,6 +146,12 @@ final class LyricsStore: ObservableObject {
             }
             guard http.statusCode == 200 else { return (nil, false) }
             let result = try JSONDecoder().decode(LRCLibTrack.self, from: data)
+            if result.hasWordSync == true,
+               let lyricsfile = result.lyricsfile,
+               !lyricsfile.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let parsed = LyricsParser.parseLyricsfile(lyricsfile, source: .lrclib)
+                if parsed.hasWordTiming { return (parsed, false) }
+            }
             if let synced = result.syncedLyrics, !synced.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return (LyricsParser.parseLRC(synced, source: .lrclib), false)
             }
@@ -149,21 +167,29 @@ final class LyricsStore: ObservableObject {
     }
 
     private func searchLRCLIB(title: String, artist: String, duration: Int) async -> (lyrics: TrackLyrics?, definitiveMiss: Bool) {
-        guard let searchURL = makeURL(path: "/api/search", items: [
-            URLQueryItem(name: "track_name", value: title),
-            URLQueryItem(name: "artist_name", value: artist)
-        ]) else { return (nil, false) }
+        var queryItems = [URLQueryItem(name: "track_name", value: title)]
+        if !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            queryItems.append(URLQueryItem(name: "artist_name", value: artist))
+        }
+        guard let searchURL = makeURL(path: "/api/search", items: queryItems) else { return (nil, false) }
         do {
             let (data, response) = try await request(searchURL)
             guard let http = response as? HTTPURLResponse else { return (nil, false) }
             if http.statusCode == 404 { return (nil, true) }
             guard http.statusCode == 200 else { return (nil, false) }
             let results = try JSONDecoder().decode([LRCLibTrack].self, from: data)
-            let nearest = results
-                .filter { $0.syncedLyrics?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false && abs($0.duration - Double(duration)) <= 3 }
-                .min { abs($0.duration - Double(duration)) < abs($1.duration - Double(duration)) }
-            guard let synced = nearest?.syncedLyrics else { return (nil, true) }
-            return (LyricsParser.parseLRC(synced, source: .lrclib), false)
+            let matching = results
+                .filter { abs($0.duration - Double(duration)) <= 2 }
+                .sorted { abs($0.duration - Double(duration)) < abs($1.duration - Double(duration)) }
+            for candidate in matching where candidate.hasWordSync == true {
+                guard let lyricsfile = candidate.lyricsfile else { continue }
+                let parsed = LyricsParser.parseLyricsfile(lyricsfile, source: .lrclib)
+                if parsed.hasWordTiming { return (parsed, false) }
+            }
+            if let synced = matching.first(where: { $0.syncedLyrics?.isEmpty == false })?.syncedLyrics {
+                return (LyricsParser.parseLRC(synced, source: .lrclib), false)
+            }
+            return (nil, true)
         } catch is CancellationError {
             return (nil, false)
         } catch {
@@ -173,7 +199,7 @@ final class LyricsStore: ObservableObject {
 
     private func request(_ url: URL) async throws -> (Data, URLResponse) {
         var request = URLRequest(url: url, timeoutInterval: 8)
-        request.setValue("EW27Player/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("EW27Player/2.2 (https://github.com/hussain-lab-w/Fake-airbuds)", forHTTPHeaderField: "User-Agent")
         return try await URLSession.shared.data(for: request)
     }
 
@@ -198,7 +224,7 @@ final class LyricsStore: ObservableObject {
     }
 
     private func cacheURL(for id: UInt64) -> URL {
-        lyricsDirectory().appendingPathComponent("lrclib-cache", isDirectory: true).appendingPathComponent("\(id).json")
+        lyricsDirectory().appendingPathComponent("lrclib-cache-v2", isDirectory: true).appendingPathComponent("\(id).json")
     }
 
     private func readImportedLyrics(for id: UInt64) -> TrackLyrics? {
@@ -231,5 +257,7 @@ private struct LyricsCache: Codable {
 private struct LRCLibTrack: Decodable {
     var syncedLyrics: String?
     var plainLyrics: String?
+    var lyricsfile: String?
+    var hasWordSync: Bool?
     var duration: Double
 }

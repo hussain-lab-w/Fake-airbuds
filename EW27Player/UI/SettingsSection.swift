@@ -12,11 +12,12 @@ struct SettingsSection: View {
         Section("Settings") {
             Toggle("Haptics", isOn: $hapticsEnabled)
             Toggle("Reset speed to 1x on launch", isOn: $resetSpeedOnLaunch)
-            Toggle("Online lyrics lookup (LRCLIB)", isOn: $onlineLyricsLookup)
+            Toggle("Online lyrics lookup", isOn: $onlineLyricsLookup)
                 .onChange(of: onlineLyricsLookup) { _, enabled in player.lyricsStore.onlineLookupSettingChanged(enabled) }
-            Text("Sends title, artist, album and duration to lrclib.net")
+            Text("Search sends the track title and artist to LRCLIB, NetEase, Apple Music, and Lyrics.ovh. LRCLIB also receives album and duration; Apple Music lyric lookup sends its song ID to paxsenix.org and zarz.moe.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Toggle("Vinyl mode", isOn: $vinylEnabled)
             Picker("Brake on pause", selection: Binding(get: { player.brakeMode }, set: { player.setBrakeMode($0) })) {
                 ForEach(BrakeController.Mode.allCases) { mode in Text(mode.rawValue).tag(mode) }
