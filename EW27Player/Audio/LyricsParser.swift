@@ -130,9 +130,12 @@ enum LyricsParser {
             }
         }
         flushLine()
-        rawLines.sort {
-            ($0.startMilliseconds ?? $0.words.first?.startMilliseconds ?? 0) < ($1.startMilliseconds ?? $1.words.first?.startMilliseconds ?? 0)
+        func startTime(of line: RawLyricsFileLine) -> Double {
+            if let start = line.startMilliseconds { return start }
+            if let start = line.words.first?.startMilliseconds { return start }
+            return 0
         }
+        rawLines.sort { startTime(of: $0) < startTime(of: $1) }
         let usableLines = rawLines.filter { !$0.text.isEmpty || !$0.words.isEmpty }
         var output: [LyricLine] = []
         var allLinesHaveWordTiming = !usableLines.isEmpty
