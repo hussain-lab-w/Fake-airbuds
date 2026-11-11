@@ -8,7 +8,7 @@ struct ContentView: View {
     @EnvironmentObject private var favorites: FavoritesStore
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
-    @State private var selectedTab: AppTab = .player
+    @State private var selectedTab: AppTab = .library
     @State private var showQueue = false
     @State private var searchText = ""
     @State private var favoritesOnly = false
@@ -345,7 +345,7 @@ struct ContentView: View {
     }
 
     private var allSongsSection: some View {
-        Section("All Local Songs") {
+        Section("All Songs") {
             if library.allSongs.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "music.note.list")
@@ -353,7 +353,7 @@ struct ContentView: View {
                         .foregroundStyle(.cyan)
                         .frame(width: 64, height: 64)
                         .background(Circle().fill(.cyan.opacity(0.12)))
-                    Text(library.message ?? "No local songs.")
+                    Text(library.message ?? "No songs.")
                         .font(.subheadline.weight(.medium))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
