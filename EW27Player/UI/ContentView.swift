@@ -202,31 +202,25 @@ struct ContentView: View {
 
     private var playerSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 12) {
-                    playerArtwork
-                        .frame(width: 88, height: 88)
-                        .overlay {
-                            if !vinylMode {
-                                RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.09), lineWidth: 1)
-                            }
-                        }
-                        .shadow(color: vinylMode ? .clear : .black.opacity(0.18), radius: 8, y: 4)
+            VStack(spacing: 20) {
+                playerArtwork
+                    .frame(maxWidth: 320)
+                    .aspectRatio(1, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(.white.opacity(0.12), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.30), radius: 24, y: 12)
+                    .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                     .onTapGesture { showFullScreen = true }
 
-                    VStack(alignment: .leading, spacing: 7) {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(player.currentItem?.title ?? "No track selected")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                             .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
                             .minimumScaleFactor(0.82)
-                        Text(player.currentItem?.artist ?? "")
+                        Text(player.currentItem?.artist ?? "Choose a song from your library")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.68))
-                            .lineLimit(1)
-                        Label(player.routeName, systemImage: "airplay.audio")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.cyan.opacity(0.95))
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
@@ -234,88 +228,94 @@ struct ContentView: View {
                         let isFavorite = favorites.contains(item)
                         Button { favorites.toggle(item) } label: {
                             Image(systemName: isFavorite ? "heart.fill" : "heart")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(isFavorite ? Color.pink : Color.white.opacity(0.72))
-                                .frame(width: 38, height: 38)
-                                .background(Color.white.opacity(0.06), in: Circle())
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(isFavorite ? Color.pink : Color.primary.opacity(0.78))
+                                .frame(width: 44, height: 44)
+                                .background(.thinMaterial, in: Circle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(isFavorite ? "Remove Favorite" : "Add to Favorites")
                     }
                 }
 
-                HStack(spacing: 12) {
-                    Button { player.previousTrack() } label: {
-                        Image(systemName: "backward.fill")
-                            .font(.system(size: 17, weight: .semibold))
-                            .frame(width: 42, height: 42)
-                            .background(Circle().fill(.white.opacity(0.09)))
+                VStack(spacing: 8) {
+                    WaveformView(store: player.waveformStore, clock: player.clock) { player.seek(to: $0) }
+                    HStack {
+                        Text(formatTime(player.elapsed))
+                        Spacer()
+                        Label(player.routeName, systemImage: "airplay.audio")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Spacer()
+                        Text(formatTime(player.duration))
                     }
+                    .font(.caption2.monospacedDigit().weight(.medium))
+                    .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 0) {
+                    playerActionButton("backward.end.fill", label: "Previous track", size: 23) { player.previousTrack() }
                     Spacer()
                     Button { haptic(); player.togglePlayPause() } label: {
-                        ZStack {
-                            PlaybackGlow(isActive: player.isPlaying)
-                                .frame(width: 76, height: 76)
-                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 22, weight: .bold))
-                                .offset(x: player.isPlaying ? 0 : 2)
-                                .frame(width: 64, height: 64)
-                                .background(Circle().fill(LinearGradient(colors: [Color.cyan, Color.blue], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                                .foregroundStyle(Color(red: 0.02, green: 0.08, blue: 0.16))
-                                .shadow(color: .cyan.opacity(0.28), radius: 14, y: 5)
-                        }
+                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 23, weight: .bold))
+                            .offset(x: player.isPlaying ? 0 : 2)
+                            .foregroundStyle(Color(red: 0.015, green: 0.06, blue: 0.12))
+                            .frame(width: 72, height: 72)
+                            .background(Circle().fill(Color.cyan.gradient))
+                            .shadow(color: .cyan.opacity(0.25), radius: 16, y: 6)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
                     Spacer()
-                    Button { haptic(); player.nextTrack() } label: {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 17, weight: .semibold))
-                            .frame(width: 42, height: 42)
-                            .background(Circle().fill(.white.opacity(0.09)))
-                    }
+                    playerActionButton("forward.end.fill", label: "Next track", size: 23) { haptic(); player.nextTrack() }
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
 
-                PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
-
-                HStack(spacing: 8) {
-                    Button { showQueue = true } label: { Label("Up Next", systemImage: "list.bullet") }
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
-                    Button { showLyrics = true } label: { Label("Lyrics", systemImage: "quote.bubble") }
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
-                        .disabled(player.currentItem == nil)
-                }
-                .font(.caption.weight(.medium))
-                .tint(.cyan)
                 HStack(spacing: 10) {
-                    Toggle("Keep pitch", isOn: $player.keepPitch)
-                        .onChange(of: player.keepPitch) { _, _ in player.setSpeed(player.speed) }
-                    Toggle("Shuffle", isOn: $player.shuffleEnabled)
+                    playerUtilityButton("Up Next", icon: "text.line.first.and.arrowtriangle.forward") { showQueue = true }
+                    playerUtilityButton("Lyrics", icon: "quote.bubble") { showLyrics = true }
+                        .disabled(player.currentItem == nil)
+                    Menu {
+                        Toggle("Shuffle", isOn: $player.shuffleEnabled)
+                        Toggle("Vinyl artwork", isOn: $vinylMode)
+                        Toggle("Keep pitch", isOn: Binding(get: { player.keepPitch }, set: { player.keepPitch = $0; player.setSpeed(player.speed) }))
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 44, height: 44)
+                            .background(.thinMaterial, in: Circle())
+                    }
+                    .accessibilityLabel("More playback options")
                 }
-                .font(.caption.weight(.medium))
-                .tint(.cyan)
-                Toggle("Vinyl mode", isOn: $vinylMode)
-                    .font(.caption.weight(.medium))
-                    .tint(.cyan)
+
+                DisclosureGroup {
+                    PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
+                        .padding(.top, 12)
+                } label: {
+                    Label("Playback tools", systemImage: "slider.horizontal.3")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
 
                 if let message = player.playbackMessage {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(16)
+            .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
-            .shadow(color: .black.opacity(0.16), radius: 12, y: 6)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
+            .shadow(color: .black.opacity(0.22), radius: 22, y: 10)
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
             .listRowBackground(Color.clear)
         } header: {
             HStack {
-                Text("CURRENT TRACK")
+                Text("NOW PLAYING")
                     .font(.caption2.weight(.bold))
                     .tracking(1.3)
                     .foregroundStyle(.secondary)
@@ -325,6 +325,29 @@ struct ContentView: View {
             }
             .textCase(nil)
         }
+    }
+
+    private func playerActionButton(_ symbol: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 52, height: 52)
+                .background(.thinMaterial, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    private func playerUtilityButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.caption.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(.thinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private var eqSection: some View {
