@@ -25,7 +25,12 @@ final class AudioPlayer: ObservableObject {
     @Published private(set) var currentItem: MPMediaItem?
     @Published private(set) var queue: [MPMediaItem] = []
     @Published private(set) var currentIndex = 0
-    @Published private(set) var isPlaying = false
+    @Published private(set) var isPlaying = false {
+        didSet {
+            if isPlaying { startProgressTimer() }
+            else { stopProgressTimer() }
+        }
+    }
     @Published private(set) var hasFinished = false
     @Published private(set) var routeName = noRoute
     @Published private(set) var playbackMessage: String?
@@ -143,9 +148,6 @@ final class AudioPlayer: ObservableObject {
         configureRemoteCommands()
         installObservers()
         updateRouteAndLoadSettings()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.updateProgress() }
-        }
     }
 
     deinit {
@@ -521,6 +523,18 @@ final class AudioPlayer: ObservableObject {
     }
 
     private func previousIndex() -> Int { queue.isEmpty ? 0 : (currentIndex - 1 + queue.count) % queue.count }
+
+    private func startProgressTimer() {
+        guard timer == nil else { return }
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.updateProgress() }
+        }
+    }
+
+    private func stopProgressTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
 
     private func updateProgress() {
         guard isPlaying, !isSeeking else { return }

@@ -17,6 +17,33 @@ struct MiniProgressLine: View {
     }
 }
 
+struct PlaybackTimeLabels: View {
+    @ObservedObject var clock: PlaybackClock
+    var centerLabel: String? = nil
+
+    var body: some View {
+        HStack {
+            Text(formatTime(clock.elapsed))
+            Spacer(minLength: 4)
+            if let centerLabel {
+                Label(centerLabel, systemImage: "airplay.audio")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 4)
+            Text(formatTime(clock.duration))
+        }
+        .font(.caption2.monospacedDigit().weight(.medium))
+        .foregroundStyle(.secondary)
+    }
+
+    private func formatTime(_ value: TimeInterval) -> String {
+        guard value.isFinite else { return "0:00" }
+        let total = max(0, Int(value.rounded()))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+}
+
 struct PlaybackControlsView: View {
     @ObservedObject var player: AudioPlayer
     @ObservedObject var clock: PlaybackClock

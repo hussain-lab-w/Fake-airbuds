@@ -240,17 +240,7 @@ struct ContentView: View {
 
                 VStack(spacing: 8) {
                     WaveformView(store: player.waveformStore, clock: player.clock) { player.seek(to: $0) }
-                    HStack {
-                        Text(formatTime(player.elapsed))
-                        Spacer()
-                        Label(player.routeName, systemImage: "airplay.audio")
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        Spacer()
-                        Text(formatTime(player.duration))
-                    }
-                    .font(.caption2.monospacedDigit().weight(.medium))
-                    .foregroundStyle(.secondary)
+                    PlaybackTimeLabels(clock: player.clock, centerLabel: player.routeName)
                 }
 
                 HStack(spacing: 0) {
@@ -418,8 +408,10 @@ struct ContentView: View {
                 .padding(.vertical, 28)
                 .listRowBackground(Color.clear)
             } else {
-                ForEach(filteredSongs, id: \.persistentID) { item in
-                    trackRow(item, queue: library.playableItems(filteredSongs))
+                let visibleSongs = filteredSongs
+                let playableQueue = library.playableItems(visibleSongs)
+                ForEach(visibleSongs, id: \.persistentID) { item in
+                    trackRow(item, queue: playableQueue)
                 }
             }
         }
@@ -449,8 +441,9 @@ struct ContentView: View {
                         )
                     ) {
                         let items = library.items(in: playlist)
+                        let playableQueue = library.playableItems(items)
                         ForEach(items, id: \.persistentID) { item in
-                            trackRow(item, queue: library.playableItems(items))
+                            trackRow(item, queue: playableQueue)
                         }
                     } label: {
                         Text(playlist.value(forProperty: MPMediaPlaylistPropertyName) as? String ?? "Playlist")
@@ -513,6 +506,7 @@ struct ContentView: View {
             let matchesText = searchText.isEmpty || fields.contains { $0.localizedCaseInsensitiveContains(searchText) }
             return matchesText && (!favoritesOnly || favorites.contains(item))
         }
+        if sortOption == .title { return matchingSongs }
         return matchingSongs.sorted { left, right in
             let leftValue: String
             let rightValue: String
@@ -533,12 +527,6 @@ struct ContentView: View {
 
     private func eqSlider(index: Int, title: String) -> some View {
         EQSliderControl(player: player, index: index, title: title)
-    }
-
-    private func formatTime(_ value: TimeInterval) -> String {
-        guard value.isFinite else { return "0:00" }
-        let total = max(0, Int(value.rounded(.down)))
-        return String(format: "%d:%02d", total / 60, total % 60)
     }
 
     private func haptic() {

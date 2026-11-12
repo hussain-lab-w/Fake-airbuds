@@ -22,7 +22,7 @@ final class WaveformStore: ObservableObject {
             peaks = cached.0; envelope = cached.1; bpm = BPMDetector.estimate(envelope: cached.1); return
         }
         if let cached = readDisk(persistentID: persistentID) {
-            memory[persistentID] = cached
+            cacheInMemory(cached, persistentID: persistentID)
             peaks = cached.0; envelope = cached.1; bpm = BPMDetector.estimate(envelope: cached.1); return
         }
         isLoading = true
@@ -30,7 +30,7 @@ final class WaveformStore: ObservableObject {
             guard let result = Self.extract(url: url), !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self else { return }
-                self.memory[persistentID] = result
+                self.cacheInMemory(result, persistentID: persistentID)
                 self.peaks = result.0
                 self.envelope = result.1
                 self.bpm = BPMDetector.estimate(envelope: result.1)
@@ -99,6 +99,13 @@ final class WaveformStore: ObservableObject {
     private func writeDisk(_ result: ([Float], [Float]), persistentID: UInt64) {
         let value = CacheValue(peaks: result.0, envelope: result.1)
         if let data = try? JSONEncoder().encode(value) { try? data.write(to: cacheURL(persistentID), options: .atomic) }
+    }
+
+    private func cacheInMemory(_ value: ([Float], [Float]), persistentID: UInt64) {
+        memory[persistentID] = value
+        if memory.count > 24, let staleID = memory.keys.first(where: { $0 != persistentID }) {
+            memory.removeValue(forKey: staleID)
+        }
     }
 
     private struct CacheValue: Codable { let peaks: [Float]; let envelope: [Float] }

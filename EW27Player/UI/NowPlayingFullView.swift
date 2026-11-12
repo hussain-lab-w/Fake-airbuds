@@ -53,8 +53,8 @@ struct NowPlayingFullView: View {
                                 .font(.title2.bold()).multilineTextAlignment(.center)
                             Text(player.currentItem?.artist ?? "").foregroundStyle(.secondary)
                             WaveformView(store: player.waveformStore, clock: player.clock) { player.seek(to: $0) }
-                            HStack { Text(formatTime(player.elapsed)); Spacer(); Text(formatTime(player.duration)) }
-                                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                            PlaybackTimeLabels(clock: player.clock)
+                                .font(.caption.monospacedDigit())
                             SpectrumView(bars: player.spectrumModel.bars)
                             Text(String(format: "Speed %.2fx", player.speed)).font(.subheadline.weight(.semibold)).foregroundStyle(.cyan)
                             PlayerInspector(player: player) { showQueue = true }
@@ -111,8 +111,4 @@ struct NowPlayingFullView: View {
 
     private var vinylEnabled: Bool { UserDefaults.standard.bool(forKey: "ew27.vinyl.enabled") }
 
-    private func formatTime(_ value: TimeInterval) -> String {
-        let total = max(0, Int(value.rounded()))
-        return String(format: "%d:%02d", total / 60, total % 60)
-    }
 }
