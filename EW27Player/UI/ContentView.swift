@@ -52,11 +52,6 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
 
-            if selectedTab != .player, player.currentItem != nil {
-                rootMiniPlayer
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
             appTabDock
         }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
@@ -68,65 +63,6 @@ struct ContentView: View {
             if reduced { albumArtMotion = false } else { startAlbumArtMotion() }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: selectedTab)
-    }
-
-    private var rootMiniPlayer: some View {
-        HStack(spacing: 10) {
-            Button {
-                withAnimation(lyricsAnimation) { selectedTab = .player }
-            } label: {
-                HStack(spacing: 10) {
-                    Group {
-                        if let artwork = player.currentArtwork {
-                            Image(uiImage: artwork).resizable().scaledToFill()
-                        } else {
-                            LinearGradient(colors: [.cyan.opacity(0.6), .indigo.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                        }
-                    }
-                    .frame(width: 42, height: 42)
-                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(player.currentItem?.title ?? "Nothing playing")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        Text(player.currentItem?.artist ?? "")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.52))
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open player")
-
-            Button { haptic(); player.togglePlayPause() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.black)
-                    .frame(width: 34, height: 34)
-                    .background(Color.cyan, in: Circle())
-            }
-            .buttonStyle(MusicPressStyle())
-            .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
-
-            Button { haptic(); player.nextTrack() } label: {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.78))
-                    .frame(width: 30, height: 34)
-            }
-            .buttonStyle(MusicPressStyle())
-            .accessibilityLabel("Next track")
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.black.opacity(0.58), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.13), lineWidth: 1))
-        .padding(.horizontal, 18)
-        .padding(.top, 6)
     }
 
     private var appTabDock: some View {
@@ -366,25 +302,27 @@ struct ContentView: View {
                 }
             }
             Spacer(minLength: 4)
-            Button { player.togglePlayPause() } label: {
+            Button { haptic(); player.togglePlayPause() } label: {
                 Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 17, weight: .bold))
-                    .frame(width: 38, height: 38)
-                    .background(Circle().fill(.cyan.opacity(0.18)))
-                    .foregroundStyle(.cyan)
+                    .font(.system(size: 15, weight: .bold))
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color.cyan))
+                    .foregroundStyle(.black)
             }
+            .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
             .buttonStyle(MusicPressStyle())
-            Button { player.nextTrack() } label: {
+            Button { haptic(); player.nextTrack() } label: {
                 Image(systemName: "forward.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .frame(width: 32, height: 38)
             }
+            .accessibilityLabel("Next track")
             .buttonStyle(MusicPressStyle())
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+        .background(Color.black.opacity(0.62), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.15), lineWidth: 1))
         .overlay(alignment: .bottom) {
             MiniProgressLine(clock: player.clock)
             .padding(.horizontal, 14)
