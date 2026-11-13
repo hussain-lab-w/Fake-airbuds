@@ -177,6 +177,21 @@ extension AudioPlayer {
         objectWillChange.send()
     }
 
+    func loadEffectsForCurrentRoute() {
+        if let data = UserDefaults.standard.data(forKey: "ew27.custom.effect.presets.v1"),
+           let stored = try? JSONDecoder().decode([String: AudioEffectPreset].self, from: data) {
+            EffectsState.shared.presets = stored
+        }
+
+        let crossfade = UserDefaults.standard.double(forKey: "ew27.crossfade.seconds")
+        EffectsState.shared.crossfadeDuration = max(0, min(12, crossfade))
+
+        let routes = UserDefaults.standard.dictionary(forKey: "ew27.effects.byRoute.v1") as? [String: [String: Any]] ?? [:]
+        guard let saved = routes[routeName], let mode = saved["mode"] as? String else { return }
+        let wet = (saved["wet"] as? NSNumber)?.floatValue
+        setReverb(mode: mode, wet: wet)
+    }
+
     private func fadeOutAndPause() {
         let state = EffectsState.shared
         state.sleepTimer?.invalidate()

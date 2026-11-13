@@ -175,6 +175,7 @@ final class AudioPlayer: ObservableObject {
 
     func applyPreset(_ preset: Preset) {
         selectedPreset = preset
+        eqEnabled = true
         switch preset {
         case .flat: eqGains = Array(repeating: 0, count: 10); preamp = 0
         case .bassBoost: eqGains = [5, 3, 0, -1, -2, 0, 0, 0, 0, 0]; preamp = -4
@@ -646,6 +647,7 @@ final class AudioPlayer: ObservableObject {
     private func updateRouteAndLoadSettings() {
         routeName = AVAudioSession.sharedInstance().currentRoute.outputs.first?.portName ?? Self.noRoute
         loadSettingsForCurrentRoute()
+        loadEffectsForCurrentRoute()
     }
 
     private func routeKey() -> String {
