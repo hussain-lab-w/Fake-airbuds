@@ -324,7 +324,7 @@ struct LyricsView: View {
                     .foregroundStyle(.cyan)
                     .padding(.horizontal, 13)
                     .padding(.vertical, 7)
-                    .background(.black.opacity(0.48), in: Capsule())
+                    .background(.white.opacity(0.055), in: Capsule())
                     .overlay(Capsule().stroke(.cyan.opacity(0.38), lineWidth: 1))
             }
             .buttonStyle(.plain)

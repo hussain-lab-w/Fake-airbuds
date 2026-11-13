@@ -48,8 +48,14 @@ struct ContentView: View {
                 case .sound: soundTab
                 }
             }
+            .id(selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
+
+            if selectedTab != .player, player.currentItem != nil {
+                rootMiniPlayer
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
 
             appTabDock
         }
@@ -61,6 +67,66 @@ struct ContentView: View {
         .onChange(of: reduceMotion) { _, reduced in
             if reduced { albumArtMotion = false } else { startAlbumArtMotion() }
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: selectedTab)
+    }
+
+    private var rootMiniPlayer: some View {
+        HStack(spacing: 10) {
+            Button {
+                withAnimation(lyricsAnimation) { selectedTab = .player }
+            } label: {
+                HStack(spacing: 10) {
+                    Group {
+                        if let artwork = player.currentArtwork {
+                            Image(uiImage: artwork).resizable().scaledToFill()
+                        } else {
+                            LinearGradient(colors: [.cyan.opacity(0.6), .indigo.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        }
+                    }
+                    .frame(width: 42, height: 42)
+                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(player.currentItem?.title ?? "Nothing playing")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text(player.currentItem?.artist ?? "")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.52))
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open player")
+
+            Button { haptic(); player.togglePlayPause() } label: {
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.black)
+                    .frame(width: 34, height: 34)
+                    .background(Color.cyan, in: Circle())
+            }
+            .buttonStyle(MusicPressStyle())
+            .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+
+            Button { haptic(); player.nextTrack() } label: {
+                Image(systemName: "forward.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .frame(width: 30, height: 34)
+            }
+            .buttonStyle(MusicPressStyle())
+            .accessibilityLabel("Next track")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.black.opacity(0.58), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.13), lineWidth: 1))
+        .padding(.horizontal, 18)
+        .padding(.top, 6)
     }
 
     private var appTabDock: some View {
@@ -73,7 +139,7 @@ struct ContentView: View {
                     HStack(spacing: 8) {
                         Image(systemName: item.icon)
                             .font(.system(size: 17, weight: .semibold))
-                            .symbolEffect(.bounce, value: selected)
+                            .symbolEffect(.bounce, value: reduceMotion ? 0 : (selected ? 1 : 0))
                         if selected {
                             Text(item.title).font(.caption.weight(.bold)).transition(.opacity.combined(with: .scale(scale: 0.86)))
                         }
@@ -82,7 +148,11 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 46)
                     .background {
-                        if selected { Capsule().fill(.white.opacity(0.105)).overlay(Capsule().stroke(.white.opacity(0.10), lineWidth: 1)) }
+                        if selected {
+                            Capsule()
+                                .fill(Color.cyan.opacity(0.13))
+                                .overlay(Capsule().stroke(Color.cyan.opacity(0.28), lineWidth: 1))
+                        }
                     }
                     .contentShape(Capsule())
                 }
@@ -92,12 +162,12 @@ struct ContentView: View {
             }
         }
         .padding(7)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.13), lineWidth: 1))
-        .shadow(color: .black.opacity(0.28), radius: 18, y: 7)
-        .padding(.horizontal, 28)
+        .background(Color.black.opacity(0.68), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+        .shadow(color: .black.opacity(0.34), radius: 20, y: 8)
+        .padding(.horizontal, 18)
         .padding(.top, 8)
-        .padding(.bottom, 5)
+        .padding(.bottom, 6)
         .background(.clear)
     }
 
