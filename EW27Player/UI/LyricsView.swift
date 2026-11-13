@@ -52,6 +52,7 @@ struct LyricsView: View {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
                 header
+                statusBadge
                 if let importError {
                     Text(importError)
                         .font(.caption2)
@@ -160,30 +161,54 @@ struct LyricsView: View {
         }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 14) {
+    private var statusBadge: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(store.isLoading ? .orange : (trackLyrics == nil ? .white.opacity(0.35) : .cyan))
+                .frame(width: 7, height: 7)
+            Text(sourceBadge)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.68))
+                .lineLimit(1)
             Spacer(minLength: 0)
-            if store.isLoading {
-                ProgressView().tint(.cyan)
-                Text("Looking up lyrics…")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                Image(systemName: "music.note")
-                    .font(.system(size: 42, weight: .light))
-                    .foregroundStyle(.white.opacity(0.42))
-                Text("No lyrics for this track")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Button { showImporter = true } label: {
-                    Label("Import lyrics file", systemImage: "square.and.arrow.down")
-                }
-                .buttonStyle(.bordered)
-                .tint(.cyan)
+            if isSynced {
+                Label("Synced", systemImage: "waveform")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.cyan)
             }
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 7)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Lyrics status: \(sourceBadge)")
+    }
+
+    private var emptyState: some View {
+        Group {
+            if store.isLoading {
+                EW27LoadingState(title: "Looking up lyrics…", detail: "Searching available lyric sources")
+                    .padding(.horizontal, 20)
+            } else {
+                EW27EmptyState(
+                    systemImage: "music.note",
+                    title: "No lyrics found",
+                    detail: "Import an LRC, TTML, or text file, or try the online lookup again.",
+                    actionTitle: "Import lyrics file"
+                ) { showImporter = true }
+                .padding(.horizontal, 20)
+                if let item = player.currentItem {
+                    Button {
+                        store.load(for: item, duration: player.duration, force: true)
+                    } label: {
+                        Label("Try online lookup again", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.cyan)
+                    .padding(.top, 10)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Synced lyrics

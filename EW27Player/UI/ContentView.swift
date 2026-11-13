@@ -573,36 +573,23 @@ struct ContentView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
-            .shadow(color: .black.opacity(0.14), radius: 10, y: 5)
+            .ew27Card(prominent: true)
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
             .listRowBackground(Color.clear)
         } header: {
-            Label("Equalizer", systemImage: "waveform.path.ecg")
-                .font(.caption.weight(.bold))
-                .tracking(1)
-                .foregroundStyle(.cyan)
-                .textCase(nil)
+            EW27SectionLabel("Equalizer", systemImage: "waveform.path.ecg")
         }
     }
 
     private var allSongsSection: some View {
         Section("All Songs") {
             if library.allSongs.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "music.note.list")
-                        .font(.system(size: 30, weight: .medium))
-                        .foregroundStyle(.cyan)
-                        .frame(width: 64, height: 64)
-                        .background(Circle().fill(.cyan.opacity(0.12)))
-                    Text(library.message ?? "No songs.")
-                        .font(.subheadline.weight(.medium))
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 28)
+                EW27EmptyState(
+                    systemImage: library.authorization == .authorized ? "music.note.list" : "lock.open",
+                    title: library.authorization == .authorized ? (searchText.isEmpty ? "Your library is empty" : "No matching songs") : "Music access is needed",
+                    detail: library.message ?? (searchText.isEmpty ? "Add music to your device, then return here to play it." : "Try a different search or clear the filters.")
+                )
+                .listRowInsets(EdgeInsets(top: 8, leading: 14, bottom: 8, trailing: 14))
                 .listRowBackground(Color.clear)
             } else {
                 let visibleSongs = filteredSongs
@@ -617,17 +604,12 @@ struct ContentView: View {
     private var playlistsSection: some View {
         Section("Playlists") {
             if library.playlists.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "music.note.list")
-                        .font(.system(size: 27, weight: .medium))
-                        .foregroundStyle(.cyan)
-                    Text("No local playlists, or permission not granted.")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
+                EW27EmptyState(
+                    systemImage: "music.note.list",
+                    title: "No playlists yet",
+                    detail: "Create a playlist in Apple Music and it will appear here."
+                )
+                .listRowInsets(EdgeInsets(top: 8, leading: 14, bottom: 8, trailing: 14))
                 .listRowBackground(Color.clear)
             } else {
                 ForEach(library.playlists, id: \.persistentID) { playlist in
@@ -696,11 +678,29 @@ struct ContentView: View {
         .listRowInsets(EdgeInsets(top: 3, leading: 14, bottom: 3, trailing: 14))
         .listRowBackground(Color.clear)
         .disabled(item.assetURL == nil)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button {
+                haptic()
+                player.addToQueue(item, playNext: true)
+            } label: {
+                Label("Play Next", systemImage: "text.insert")
+            }
+            .tint(.cyan)
+            Button {
+                haptic()
+                favorites.toggle(item)
+            } label: {
+                Label(favorites.contains(item) ? "Unfavorite" : "Favorite", systemImage: favorites.contains(item) ? "heart.slash" : "heart")
+            }
+            .tint(.pink)
+        }
         .contextMenu {
             Button { player.addToQueue(item, playNext: true) } label: { Label("Play Next", systemImage: "text.insert") }
             Button { player.addToQueue(item) } label: { Label("Add to Queue", systemImage: "text.append") }
-            Button { favorites.toggle(item) } label: { Label(favorites.contains(item) ? "Remove Favorite" : "Favorite", systemImage: favorites.contains(item) ? "heart.slash" : "heart") }
+            Button { haptic(); favorites.toggle(item) } label: { Label(favorites.contains(item) ? "Remove Favorite" : "Favorite", systemImage: favorites.contains(item) ? "heart.slash" : "heart") }
         }
+        .accessibilityLabel("\(item.title ?? "Untitled"), \(item.artist ?? "Unknown artist")")
+        .accessibilityHint(item.assetURL == nil ? "Unavailable on this device" : "Double tap to play. Swipe for queue actions.")
     }
 
     private var filteredSongs: [MPMediaItem] {
@@ -733,8 +733,8 @@ struct ContentView: View {
     }
 
     private func haptic() {
-        let enabled = UserDefaults.standard.object(forKey: "ew27.haptics.enabled") as? Bool ?? true
-        if enabled { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+        guard UserDefaults.standard.object(forKey: "ew27.haptics.enabled") as? Bool ?? true else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 }
 

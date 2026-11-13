@@ -41,18 +41,26 @@ final class QueueViewModel: ObservableObject {
 
     func play(at index: Int) {
         guard items.indices.contains(index) else { return }
+        tactility()
         player?.jumpToQueue(index: index)
         refreshFromPlayer()
     }
 
     func remove(at offsets: IndexSet) {
+        tactility()
         player?.removeFromQueue(at: offsets)
         refreshFromPlayer()
     }
 
     func move(from source: IndexSet, to destination: Int) {
+        tactility()
         player?.moveQueue(from: source, to: destination)
         refreshFromPlayer()
+    }
+
+    private func tactility() {
+        guard UserDefaults.standard.object(forKey: "ew27.haptics.enabled") as? Bool ?? true else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func refreshFromPlayer() {

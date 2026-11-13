@@ -112,23 +112,19 @@ struct QueueView: View {
                 }
             }
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(LinearGradient(colors: [.white.opacity(0.23), .white.opacity(0.045)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-            }
+            .ew27Card(prominent: true)
             .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 14, trailing: 16))
             .listRowBackground(Color.clear)
         }
     }
 
     private var emptyQueueRow: some View {
-        ContentUnavailableView {
-            Label("Queue is empty", systemImage: "text.line.first.and.arrowtriangle.forward")
-        } description: {
-            Text("Choose a song from your library to start playback.")
-        }
-        .foregroundStyle(.white.opacity(0.72))
+        EW27EmptyState(
+            systemImage: "text.line.first.and.arrowtriangle.forward",
+            title: "Queue is empty",
+            detail: "Choose a song from your library to start playback."
+        )
+        .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
         .listRowBackground(Color.clear)
     }
 }
