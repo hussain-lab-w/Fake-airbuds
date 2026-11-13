@@ -112,9 +112,9 @@ struct ContentView: View {
                 ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
                 if showLyrics {
                     LyricsView(player: player, store: player.lyricsStore, onReturnToPlayer: {
-                        withAnimation(.easeInOut(duration: 0.28)) { showLyrics = false }
+                        setLyricsVisible(false)
                     })
-                    .transition(.opacity)
+                    .transition(lyricsTransition(edge: .trailing))
                 } else {
                     ScrollView(showsIndicators: false) {
                         playerSection
@@ -123,11 +123,31 @@ struct ContentView: View {
                             .padding(.bottom, 22)
                             .frame(maxWidth: .infinity)
                     }
-                    .transition(.opacity)
+                    .transition(lyricsTransition(edge: .leading))
                 }
             }
-            .animation(.easeInOut(duration: 0.28), value: showLyrics)
+            .animation(lyricsAnimation, value: showLyrics)
             .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+
+    private var lyricsAnimation: Animation {
+        reduceMotion
+            ? .linear(duration: 0.01)
+            : .spring(response: 0.46, dampingFraction: 0.86, blendDuration: 0.12)
+    }
+
+    private func lyricsTransition(edge: Edge) -> AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.985)).combined(with: .move(edge: edge)),
+            removal: .opacity.combined(with: .scale(scale: 1.015)).combined(with: .move(edge: edge))
+        )
+    }
+
+    private func setLyricsVisible(_ visible: Bool) {
+        withAnimation(lyricsAnimation) {
+            showLyrics = visible
         }
     }
 
@@ -303,7 +323,7 @@ struct ContentView: View {
         }
         .shadow(color: .black.opacity(0.32), radius: 14, y: 7)
         .contentShape(Rectangle())
-        .onTapGesture { selectedTab = .player; showLyrics = false }
+        .onTapGesture { selectedTab = .player; setLyricsVisible(false) }
     }
 
     @ViewBuilder
@@ -370,7 +390,7 @@ struct ContentView: View {
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .overlay(alignment: .bottom) {
                 if player.currentItem != nil {
-                    LyricsPreviewCard(player: player, store: player.lyricsStore) { showLyrics = true }
+                    LyricsPreviewCard(player: player, store: player.lyricsStore) { setLyricsVisible(true) }
                         .padding(14)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -452,7 +472,7 @@ struct ContentView: View {
             deckActionButton("Shuffle", icon: "shuffle", isActive: player.shuffleEnabled) { player.shuffleEnabled.toggle() }
             Spacer()
             deckActionButton("Lyrics", icon: "quote.bubble", isActive: showLyrics) {
-                withAnimation(.easeInOut(duration: 0.28)) { showLyrics = true }
+                setLyricsVisible(true)
             }
                 .disabled(player.currentItem == nil)
             Spacer()
