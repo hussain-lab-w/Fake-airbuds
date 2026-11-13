@@ -293,7 +293,7 @@ struct LyricsView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(line.words.map { $0.text }.joined(separator: " ")) at \(formatTime(line.start))")
+        .accessibilityLabel("\(line.words.map { $0.text }.joined(separator: " ")) at \(String(format: "%.0f seconds", line.start))")
         .accessibilityHint("Tap to jump to this line. Long press to copy it.")
         .accessibilityAddTraits(.isButton)
     }
