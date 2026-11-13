@@ -8,7 +8,7 @@ struct ContentView: View {
     @EnvironmentObject private var favorites: FavoritesStore
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
-    @State private var selectedTab: AppTab = .library
+    @State private var selectedTab: AppTab = .player
     @State private var showQueue = false
     @State private var searchText = ""
     @State private var favoritesOnly = false
@@ -50,9 +50,21 @@ struct ContentView: View {
 
     private var playerTab: some View {
         NavigationStack {
-            appList { playerSection }
-                .navigationTitle("Now Playing")
-                .navigationBarTitleDisplayMode(.inline)
+            ScrollView(showsIndicators: false) {
+                playerSection
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: .infinity)
+            }
+            .background {
+                LinearGradient(
+                    colors: [Color(red: 0.075, green: 0.10, blue: 0.15), Color(red: 0.025, green: 0.03, blue: 0.055), .black],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ).ignoresSafeArea()
+            }
+            .toolbar(.hidden, for: .navigationBar)
         }
         .tabItem { Label("Player", systemImage: "waveform") }
         .tag(AppTab.player)
@@ -201,120 +213,204 @@ struct ContentView: View {
     }
 
     private var playerSection: some View {
-        Section {
-            VStack(spacing: 20) {
-                playerArtwork
-                    .frame(maxWidth: 320)
-                    .aspectRatio(1, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(.white.opacity(0.12), lineWidth: 1))
-                    .shadow(color: .black.opacity(0.30), radius: 24, y: 12)
-                    .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                    .onTapGesture { showFullScreen = true }
-
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(player.currentItem?.title ?? "No track selected")
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.82)
-                        Text(player.currentItem?.artist ?? "Choose a song from your library")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                    if let item = player.currentItem {
-                        let isFavorite = favorites.contains(item)
-                        Button { favorites.toggle(item) } label: {
-                            Image(systemName: isFavorite ? "heart.fill" : "heart")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(isFavorite ? Color.pink : Color.primary.opacity(0.78))
-                                .frame(width: 44, height: 44)
-                                .background(.thinMaterial, in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(isFavorite ? "Remove Favorite" : "Add to Favorites")
-                    }
-                }
-
-                VStack(spacing: 8) {
-                    WaveformView(store: player.waveformStore, clock: player.clock) { player.seek(to: $0) }
-                    PlaybackTimeLabels(clock: player.clock, centerLabel: player.routeName)
-                }
-
-                HStack(spacing: 0) {
-                    playerActionButton("backward.end.fill", label: "Previous track", size: 23) { player.previousTrack() }
-                    Spacer()
-                    Button { haptic(); player.togglePlayPause() } label: {
-                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 23, weight: .bold))
-                            .offset(x: player.isPlaying ? 0 : 2)
-                            .foregroundStyle(Color(red: 0.015, green: 0.06, blue: 0.12))
-                            .frame(width: 72, height: 72)
-                            .background(Circle().fill(Color.cyan.gradient))
-                            .shadow(color: .cyan.opacity(0.25), radius: 16, y: 6)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
-                    Spacer()
-                    playerActionButton("forward.end.fill", label: "Next track", size: 23) { haptic(); player.nextTrack() }
-                }
-                .padding(.horizontal, 14)
-
-                HStack(spacing: 10) {
-                    playerUtilityButton("Up Next", icon: "text.line.first.and.arrowtriangle.forward") { showQueue = true }
-                    playerUtilityButton("Lyrics", icon: "quote.bubble") { showLyrics = true }
-                        .disabled(player.currentItem == nil)
-                    Menu {
-                        Toggle("Shuffle", isOn: $player.shuffleEnabled)
-                        Toggle("Vinyl artwork", isOn: $vinylMode)
-                        Toggle("Keep pitch", isOn: Binding(get: { player.keepPitch }, set: { player.keepPitch = $0; player.setSpeed(player.speed) }))
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 44, height: 44)
-                            .background(.thinMaterial, in: Circle())
-                    }
-                    .accessibilityLabel("More playback options")
-                }
-
-                DisclosureGroup {
-                    PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
-                        .padding(.top, 12)
-                } label: {
-                    Label("Playback tools", systemImage: "slider.horizontal.3")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-
-                if let message = player.playbackMessage {
-                    Label(message, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+        VStack(alignment: .leading, spacing: 22) {
+            deckHeader
+            deckIdentity
+            deckProgress
+            deckTransport
+            deckShortcuts
+            deckTuning
+            if let message = player.playbackMessage {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
-            .shadow(color: .black.opacity(0.22), radius: 22, y: 10)
-            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
-            .listRowBackground(Color.clear)
-        } header: {
-            HStack {
-                Text("NOW PLAYING")
-                    .font(.caption2.weight(.bold))
-                    .tracking(1.3)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Image(systemName: player.isPlaying ? "waveform.circle.fill" : "waveform.circle")
-                    .foregroundStyle(.cyan.opacity(0.75))
-            }
-            .textCase(nil)
         }
+    }
+
+    private var deckHeader: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("EW27  /  LISTENING DECK")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.8)
+                    .foregroundStyle(.cyan)
+                Text(player.isPlaying ? "In the moment" : "Your music")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            Spacer()
+            Button { showQueue = true } label: {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 46, height: 46)
+                    .background(.white.opacity(0.09), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open queue")
+        }
+    }
+
+    private var deckIdentity: some View {
+        HStack(spacing: 16) {
+            playerArtwork
+                .frame(width: 100, height: 100)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+                .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
+                .onTapGesture { showFullScreen = true }
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text(player.currentItem?.title ?? "Nothing playing")
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                Text(player.currentItem?.artist ?? "Choose a track in your library")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.58))
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Circle().fill(player.isPlaying ? Color.green : Color.white.opacity(0.35)).frame(width: 6, height: 6)
+                    Text(player.isPlaying ? "PLAYING" : "READY")
+                        .font(.caption2.weight(.bold)).tracking(1.1)
+                    Text("·  \(player.audioQualityLabel)")
+                        .font(.caption2).lineLimit(1)
+                }
+                .foregroundStyle(.white.opacity(0.55))
+            }
+            Spacer(minLength: 0)
+            if let item = player.currentItem {
+                let isFavorite = favorites.contains(item)
+                Button { favorites.toggle(item) } label: {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(isFavorite ? Color.pink : Color.white.opacity(0.76))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isFavorite ? "Remove Favorite" : "Add to Favorites")
+            }
+        }
+        .padding(14)
+        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+    }
+
+    private var deckProgress: some View {
+        VStack(spacing: 10) {
+            WaveformView(store: player.waveformStore, clock: player.clock) { player.seek(to: $0) }
+                .frame(height: 54)
+            PlaybackTimeLabels(clock: player.clock)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    private var deckTransport: some View {
+        HStack(spacing: 0) {
+            Button { player.shuffleEnabled.toggle() } label: {
+                Image(systemName: "shuffle")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(player.shuffleEnabled ? Color.cyan : Color.white.opacity(0.48))
+                    .frame(width: 42, height: 56)
+            }
+            .buttonStyle(.plain)
+            Spacer(minLength: 2)
+            playerActionButton("backward.end.fill", label: "Previous track", size: 20) { player.previousTrack() }
+            Spacer(minLength: 2)
+            Button { haptic(); player.togglePlayPause() } label: {
+                HStack(spacing: 9) {
+                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 17, weight: .bold))
+                    Text(player.isPlaying ? "PAUSE" : "PLAY")
+                        .font(.caption.weight(.heavy)).tracking(1.3)
+                }
+                .foregroundStyle(Color(red: 0.03, green: 0.07, blue: 0.11))
+                .frame(width: 112, height: 56)
+                .background(Capsule().fill(Color.cyan.gradient))
+                .shadow(color: .cyan.opacity(0.24), radius: 15, y: 6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+            Spacer(minLength: 2)
+            playerActionButton("forward.end.fill", label: "Next track", size: 20) { haptic(); player.nextTrack() }
+            Spacer(minLength: 2)
+            Button { showLyrics = true } label: {
+                Image(systemName: "quote.bubble")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .frame(width: 42, height: 56)
+            }
+            .buttonStyle(.plain)
+            .disabled(player.currentItem == nil)
+            .accessibilityLabel("Open lyrics")
+        }
+    }
+
+    private var deckShortcuts: some View {
+        HStack(spacing: 12) {
+            listeningCard(title: "UP NEXT", value: nextTrackTitle, icon: "text.line.first.and.arrowtriangle.forward") {
+                showQueue = true
+            }
+            listeningCard(title: "OUTPUT", value: player.routeName, icon: "airplay.audio") {
+                showFullScreen = true
+            }
+        }
+    }
+
+    private var deckTuning: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("QUICK TUNING").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.white.opacity(0.55))
+                Spacer()
+                Text(String(format: "%.2f×", player.speed)).font(.caption.monospacedDigit().weight(.bold)).foregroundStyle(.cyan)
+            }
+            HStack(spacing: 10) {
+                ForEach(speedPresets, id: \.self) { value in
+                    Button(String(format: "%g×", value)) { player.setSpeed(value) }
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(abs(player.speed - value) < 0.02 ? Color.black : .white.opacity(0.76))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(abs(player.speed - value) < 0.02 ? Color.cyan : Color.white.opacity(0.07), in: Capsule())
+                }
+            }
+            DisclosureGroup {
+                PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
+                    .padding(.top, 12)
+            } label: {
+                Label("Advanced playback", systemImage: "slider.horizontal.3")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.82))
+            }
+            .tint(.cyan)
+        }
+        .padding(16)
+        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.075), lineWidth: 1))
+    }
+
+    private var nextTrackTitle: String {
+        guard player.queue.indices.contains(player.currentIndex + 1) else { return "Queue & shuffle" }
+        return player.queue[player.currentIndex + 1].title ?? "Untitled"
+    }
+
+    private func listeningCard(title: String, value: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(.cyan)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(.caption2.weight(.bold)).tracking(1.1).foregroundStyle(.white.opacity(0.46))
+                    Text(value).font(.caption.weight(.semibold)).foregroundStyle(.white).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(.white.opacity(0.35))
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, minHeight: 64)
+            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func playerActionButton(_ symbol: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
@@ -327,17 +423,6 @@ struct ContentView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
-    }
-
-    private func playerUtilityButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: icon)
-                .font(.caption.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(.thinMaterial, in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 
     private var eqSection: some View {
