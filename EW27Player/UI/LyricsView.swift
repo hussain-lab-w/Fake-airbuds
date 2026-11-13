@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct LyricsView: View {
     @ObservedObject var player: AudioPlayer
     @ObservedObject var store: LyricsStore
+    var onReturnToPlayer: (() -> Void)? = nil
 
     @AppStorage("ew27.lyrics.fontSize.v2") private var fontSize = 30.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -68,6 +69,7 @@ struct LyricsView: View {
                 .padding(.bottom, 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.clear)
         .fileImporter(isPresented: $showImporter, allowedContentTypes: acceptedFileTypes, allowsMultipleSelection: false, onCompletion: handleImport)
         .onDisappear { resumeAutoScrollTask?.cancel() }
     }
@@ -76,6 +78,18 @@ struct LyricsView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
+            if let onReturnToPlayer {
+                Button(action: onReturnToPlayer) {
+                    Label("Player", systemImage: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.88))
+                        .padding(.horizontal, 12)
+                        .frame(height: 40)
+                        .background(.white.opacity(0.09), in: Capsule())
+                }
+                .buttonStyle(MusicPressStyle())
+                .accessibilityLabel("Return to player")
+            }
             Group {
                 if let image = player.currentArtwork {
                     Image(uiImage: image).resizable().scaledToFill()

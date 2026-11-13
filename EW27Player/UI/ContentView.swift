@@ -12,7 +12,6 @@ struct ContentView: View {
     @State private var favoritesOnly = false
     @State private var sortOption: LibrarySortOption = .title
     @AppStorage("ew27.vinyl.enabled") private var vinylMode = false
-    @State private var showFullScreen = false
     @State private var showLyrics = false
     @State private var albumArtMotion = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -56,8 +55,6 @@ struct ContentView: View {
         }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
         .sheet(isPresented: $showQueue) { QueueView(player: player) }
-        .sheet(isPresented: $showFullScreen) { NowPlayingFullView(player: player) }
-        .sheet(isPresented: $showLyrics) { LyricsView(player: player, store: player.lyricsStore) }
         .preferredColorScheme(.dark)
         .sensoryFeedback(.selection, trigger: selectedTab)
         .onAppear { startAlbumArtMotion() }
@@ -111,14 +108,25 @@ struct ContentView: View {
 
     private var playerTab: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                playerSection
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    .padding(.bottom, 22)
-                    .frame(maxWidth: .infinity)
+            ZStack {
+                ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
+                if showLyrics {
+                    LyricsView(player: player, store: player.lyricsStore, onReturnToPlayer: {
+                        withAnimation(.easeInOut(duration: 0.28)) { showLyrics = false }
+                    })
+                    .transition(.opacity)
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        playerSection
+                            .padding(.horizontal, 20)
+                            .padding(.top, 10)
+                            .padding(.bottom, 22)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .transition(.opacity)
+                }
             }
-            .background { ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint) }
+            .animation(.easeInOut(duration: 0.28), value: showLyrics)
             .toolbar(.hidden, for: .navigationBar)
         }
     }
@@ -295,7 +303,7 @@ struct ContentView: View {
         }
         .shadow(color: .black.opacity(0.32), radius: 14, y: 7)
         .contentShape(Rectangle())
-        .onTapGesture { showFullScreen = true }
+        .onTapGesture { selectedTab = .player; showLyrics = false }
     }
 
     @ViewBuilder
@@ -376,7 +384,6 @@ struct ContentView: View {
             .animation(.spring(response: 0.55, dampingFraction: 0.78), value: player.currentItem?.persistentID)
             .frame(maxWidth: .infinity)
             .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .onTapGesture { showFullScreen = true }
     }
 
     private var deckIdentity: some View {
@@ -444,7 +451,9 @@ struct ContentView: View {
         HStack {
             deckActionButton("Shuffle", icon: "shuffle", isActive: player.shuffleEnabled) { player.shuffleEnabled.toggle() }
             Spacer()
-            deckActionButton("Lyrics", icon: "quote.bubble", isActive: false) { showLyrics = true }
+            deckActionButton("Lyrics", icon: "quote.bubble", isActive: showLyrics) {
+                withAnimation(.easeInOut(duration: 0.28)) { showLyrics = true }
+            }
                 .disabled(player.currentItem == nil)
             Spacer()
             deckActionButton("Queue", icon: "list.bullet", isActive: false) { showQueue = true }
