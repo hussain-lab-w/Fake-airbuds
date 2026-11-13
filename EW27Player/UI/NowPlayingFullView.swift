@@ -4,8 +4,10 @@ import MediaPlayer
 struct NowPlayingFullView: View {
     @ObservedObject var player: AudioPlayer
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showLyrics = false
     @State private var showQueue = false
+    @State private var artworkMotion = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -19,7 +21,7 @@ struct NowPlayingFullView: View {
                                 .frame(width: 36, height: 36)
                                 .background(Circle().fill(.white.opacity(0.09)))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(MusicPressStyle())
                         .accessibilityLabel("Close player")
                         Spacer()
                      Text("Now Playing").font(.headline)
@@ -32,7 +34,7 @@ struct NowPlayingFullView: View {
                                 .frame(width: 36, height: 36)
                                 .background(Circle().fill(.white.opacity(0.09)))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(MusicPressStyle())
                         .accessibilityLabel(showLyrics ? "Show artwork" : "Show lyrics")
 
                     }
@@ -63,7 +65,6 @@ struct NowPlayingFullView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 30)
                     }
-                    .background { background }
                     .clipped()
                     .transition(.opacity)
                 }
@@ -71,6 +72,10 @@ struct NowPlayingFullView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .sheet(isPresented: $showQueue) { QueueView(player: player) }
             .background { background }
+            .onAppear { startArtworkMotion() }
+            .onChange(of: reduceMotion) { _, reduced in
+                if reduced { artworkMotion = false } else { startArtworkMotion() }
+            }
                 .gesture(DragGesture().onEnded { value in
             guard !showLyrics else { return }
             if value.translation.height > 120 {
@@ -106,7 +111,17 @@ struct NowPlayingFullView: View {
             }
         }
         .frame(maxWidth: 330).frame(height: 330)
+        .scaleEffect(!reduceMotion && player.isPlaying && artworkMotion ? 1.025 : 1)
+        .rotation3DEffect(.degrees(!reduceMotion && player.isPlaying && artworkMotion ? 1.5 : 0), axis: (x: 0, y: 1, z: 0))
+        .id(player.currentItem?.persistentID)
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        .animation(.spring(response: 0.55, dampingFraction: 0.78), value: player.currentItem?.persistentID)
         .onTapGesture(count: 2) { player.togglePlayPause() }
+    }
+
+    private func startArtworkMotion() {
+        guard !reduceMotion, !artworkMotion else { if reduceMotion { artworkMotion = false }; return }
+        withAnimation(.easeInOut(duration: 4.8).repeatForever(autoreverses: true)) { artworkMotion = true }
     }
 
     private var vinylEnabled: Bool { UserDefaults.standard.bool(forKey: "ew27.vinyl.enabled") }
