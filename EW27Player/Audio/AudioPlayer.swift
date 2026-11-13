@@ -283,6 +283,13 @@ final class AudioPlayer: ObservableObject {
         persistSession()
     }
 
+    func clearUpcomingQueue() {
+        guard !queue.isEmpty else { return }
+        let end = min(queue.count, currentIndex + 1)
+        queue = Array(queue.prefix(end))
+        persistSession()
+    }
+
     func moveQueue(from source: IndexSet, to destination: Int) {
         queue.move(fromOffsets: source, toOffset: destination)
         if let currentID = currentItem?.persistentID, let index = queue.firstIndex(where: { $0.persistentID == currentID }) { currentIndex = index }

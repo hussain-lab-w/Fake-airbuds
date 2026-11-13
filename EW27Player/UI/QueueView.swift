@@ -54,7 +54,18 @@ struct QueueView: View {
                         .accessibilityLabel("Close queue")
                 }
                 if !model.items.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) { EditButton() }
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        if model.items.count > model.currentIndex + 1 {
+                            Button {
+                                model.clearUpcoming()
+                            } label: {
+                                Image(systemName: "xmark.circle")
+                            }
+                            .accessibilityLabel("Clear upcoming tracks")
+                            .accessibilityHint("Keeps the currently playing track")
+                        }
+                        EditButton()
+                    }
                 }
             }
             .transaction { transaction in
@@ -76,7 +87,7 @@ struct QueueView: View {
                             .font(.caption2.weight(.bold))
                             .tracking(1.5)
                             .foregroundStyle(.cyan)
-                        Text("\(model.items.count) tracks in your queue")
+                        Text("\(max(0, model.items.count - model.currentIndex - 1)) tracks up next")
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.white.opacity(0.58))
                     }
@@ -104,13 +115,22 @@ struct QueueView: View {
                                 .lineLimit(1)
                         }
                         Spacer(minLength: 0)
-                        Image(systemName: "waveform")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.cyan)
-                            .accessibilityHidden(true)
+                            Image(systemName: "waveform")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.cyan)
+                                .accessibilityHidden(true)
+                        }
+                        if !model.items.isEmpty {
+                            HStack(spacing: 7) {
+                                Image(systemName: "arrow.down.right")
+                                    .font(.caption2.weight(.bold))
+                                Text("Tap to play now · drag to shape what comes next")
+                                    .font(.caption2.weight(.medium))
+                            }
+                            .foregroundStyle(.white.opacity(0.42))
+                        }
                     }
                 }
-            }
             .padding(16)
             .ew27Card(prominent: true)
             .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 14, trailing: 16))

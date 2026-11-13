@@ -161,7 +161,7 @@ struct ContentView: View {
         NavigationStack {
             appList {
                 libraryOverviewSection
-                Toggle("Favorites only", isOn: $favoritesOnly)
+                libraryFilterSection
                 allSongsSection
                 playlistsSection
             }
@@ -187,6 +187,42 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    private var libraryFilterSection: some View {
+        Section {
+            HStack(spacing: 8) {
+                libraryFilterButton(title: "All songs", count: library.allSongs.count, isSelected: !favoritesOnly) {
+                    favoritesOnly = false
+                }
+                libraryFilterButton(title: "Favorites", count: library.allSongs.filter { favorites.contains($0) }.count, isSelected: favoritesOnly) {
+                    favoritesOnly = true
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
+            .listRowBackground(Color.clear)
+        }
+    }
+
+    private func libraryFilterButton(title: String, count: Int, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text(title)
+                Text("\(count)")
+                    .font(.caption2.monospacedDigit().weight(.bold))
+                    .opacity(0.72)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(isSelected ? Color.black : Color.white.opacity(0.68))
+            .frame(maxWidth: .infinity)
+            .frame(height: 38)
+            .background(isSelected ? Color.cyan : Color.white.opacity(0.07), in: Capsule())
+            .overlay(Capsule().stroke(isSelected ? Color.cyan.opacity(0.8) : Color.white.opacity(0.09), lineWidth: 1))
+        }
+        .buttonStyle(MusicPressStyle())
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private var soundTab: some View {

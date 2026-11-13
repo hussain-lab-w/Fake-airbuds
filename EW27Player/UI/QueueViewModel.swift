@@ -58,6 +58,12 @@ final class QueueViewModel: ObservableObject {
         refreshFromPlayer()
     }
 
+    func clearUpcoming() {
+        tactility()
+        player?.clearUpcomingQueue()
+        refreshFromPlayer()
+    }
+
     private func tactility() {
         guard UserDefaults.standard.object(forKey: "ew27.haptics.enabled") as? Bool ?? true else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
