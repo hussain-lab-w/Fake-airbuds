@@ -2,45 +2,49 @@ import SwiftUI
 import MediaPlayer
 
 struct QueueView: View {
-    @ObservedObject var player: AudioPlayer
+    @StateObject private var model: QueueViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(player: AudioPlayer) {
+        _model = StateObject(wrappedValue: QueueViewModel(player: player))
+    }
 
     var body: some View {
         NavigationStack {
             List {
                 queueHeader
 
-                if player.queue.isEmpty {
+                if model.items.isEmpty {
                     emptyQueueRow
                 } else {
-                    ForEach(player.queue, id: \.persistentID) { item in
-                        if let index = player.queue.firstIndex(where: { $0.persistentID == item.persistentID }) {
+                    ForEach(model.items, id: \.persistentID) { item in
+                        if let index = model.items.firstIndex(where: { $0.persistentID == item.persistentID }) {
                             QueueRow(
                                 item: item,
                                 index: index,
-                                isCurrent: index == player.currentIndex,
+                                isCurrent: index == model.currentIndex,
                                 reduceMotion: reduceMotion,
-                                onPlay: { player.jumpToQueue(index: index) }
+                                onPlay: { model.play(at: index) }
                             )
                             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .listRowBackground(Color.clear)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
-                                    player.removeFromQueue(at: IndexSet(integer: index))
+                                    model.remove(at: IndexSet(integer: index))
                                 } label: {
                                     Label("Remove", systemImage: "trash")
                                 }
                             }
                         }
                     }
-                    .onDelete { player.removeFromQueue(at: $0) }
-                    .onMove { player.moveQueue(from: $0, to: $1) }
+                    .onDelete { model.remove(at: $0) }
+                    .onMove { model.move(from: $0, to: $1) }
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .background { ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint) }
+            .background { ArtworkAuroraBackground(image: model.currentArtwork, tint: model.artworkTint) }
             .navigationTitle("Up Next")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -49,7 +53,7 @@ struct QueueView: View {
                         .buttonStyle(MusicPressStyle())
                         .accessibilityLabel("Close queue")
                 }
-                if !player.queue.isEmpty {
+                if !model.items.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) { EditButton() }
                 }
             }
@@ -72,7 +76,7 @@ struct QueueView: View {
                             .font(.caption2.weight(.bold))
                             .tracking(1.5)
                             .foregroundStyle(.cyan)
-                        Text("\(player.queue.count) tracks in your queue")
+                        Text("\(model.items.count) tracks in your queue")
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.white.opacity(0.58))
                     }
@@ -82,7 +86,7 @@ struct QueueView: View {
                         .foregroundStyle(.cyan)
                 }
 
-                if let current = player.currentItem {
+                if let current = model.currentItem {
                     HStack(spacing: 12) {
                         QueueArtworkView(item: current, size: 52)
                         VStack(alignment: .leading, spacing: 4) {
