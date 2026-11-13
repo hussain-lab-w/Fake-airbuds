@@ -114,8 +114,8 @@ struct ContentView: View {
             ScrollView(showsIndicators: false) {
                 playerSection
                     .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 28)
+                    .padding(.top, 10)
+                    .padding(.bottom, 22)
                     .frame(maxWidth: .infinity)
             }
             .background { ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint) }
@@ -313,8 +313,9 @@ struct ContentView: View {
     }
 
     private var playerSection: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 20) {
             deckHeader
+            deckArtwork
             deckIdentity
             deckProgress
             deckTransport
@@ -329,204 +330,162 @@ struct ContentView: View {
     }
 
     private var deckHeader: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("EW27  /  LISTENING DECK")
-                    .font(.caption2.weight(.bold))
-                    .tracking(1.8)
-                    .foregroundStyle(.cyan)
-                Text(player.isPlaying ? "In the moment" : "Your music")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
+        HStack(spacing: 10) {
+            Text("NOW PLAYING")
+                .font(.caption2.weight(.bold))
+                .tracking(1.6)
+                .foregroundStyle(.white.opacity(0.48))
+            Spacer(minLength: 0)
+            HStack(spacing: 5) {
+                Image(systemName: "airplay.audio").font(.caption2)
+                Text(player.routeName).font(.caption2.weight(.medium)).lineLimit(1).minimumScaleFactor(0.75)
             }
-            Spacer()
-            Button { showQueue = true } label: {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 46, height: 46)
-                    .background(.white.opacity(0.09), in: Circle())
-            }
-            .buttonStyle(MusicPressStyle())
-            .accessibilityLabel("Open queue")
+            .foregroundStyle(.white.opacity(0.48))
             Menu {
                 Toggle("Vinyl artwork", isOn: $vinylMode)
                 Toggle("Keep pitch", isOn: Binding(get: { player.keepPitch }, set: { player.keepPitch = $0; player.setSpeed(player.speed) }))
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 46, height: 46)
-                    .background(.white.opacity(0.09), in: Circle())
+                    .foregroundStyle(.white.opacity(0.82))
+                    .frame(width: 42, height: 42)
+                    .background(.white.opacity(0.075), in: Circle())
             }
             .accessibilityLabel("Playback options")
         }
     }
 
-    private var deckIdentity: some View {
-        HStack(spacing: 16) {
-            playerArtwork
-                .frame(width: 124, height: 124)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
-                .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
-                .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.035 : 1)
-                .rotation3DEffect(.degrees(!reduceMotion && player.isPlaying && albumArtMotion ? 2 : 0), axis: (x: 0, y: 1, z: 0))
-                .id(player.currentItem?.persistentID)
-                .transition(.opacity.combined(with: .scale(scale: 0.94)))
-                .animation(.spring(response: 0.55, dampingFraction: 0.78), value: player.currentItem?.persistentID)
-                .onTapGesture { showFullScreen = true }
+    private var deckArtwork: some View {
+        playerArtwork
+            .frame(maxWidth: 350)
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(.white.opacity(0.16), lineWidth: 1))
+            .shadow(color: (Color(uiColor: player.artworkTint ?? .systemBlue)).opacity(0.20), radius: 32, y: 16)
+            .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.025 : 1)
+            .rotation3DEffect(.degrees(!reduceMotion && player.isPlaying && albumArtMotion ? 1.5 : 0), axis: (x: 0, y: 1, z: 0))
+            .id(player.currentItem?.persistentID)
+            .transition(.opacity.combined(with: .scale(scale: 0.96)))
+            .animation(.spring(response: 0.55, dampingFraction: 0.78), value: player.currentItem?.persistentID)
+            .frame(maxWidth: .infinity)
+            .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .onTapGesture { showFullScreen = true }
+    }
 
-            VStack(alignment: .leading, spacing: 7) {
+    private var deckIdentity: some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(player.currentItem?.title ?? "Nothing playing")
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                    .font(.system(size: 23, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
                 Text(player.currentItem?.artist ?? "Choose a track in your library")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.58))
+                    .foregroundStyle(.white.opacity(0.60))
                     .lineLimit(1)
-                HStack(spacing: 6) {
-                    Circle().fill(player.isPlaying ? Color.green : Color.white.opacity(0.35)).frame(width: 6, height: 6)
-                    Text(player.isPlaying ? "PLAYING" : "READY")
-                        .font(.caption2.weight(.bold)).tracking(1.1)
-                    Text("·  \(player.audioQualityLabel)")
-                        .font(.caption2).lineLimit(1)
-                }
-                .foregroundStyle(.white.opacity(0.55))
+                Text(player.audioQualityLabel)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.40))
+                    .lineLimit(1)
             }
             Spacer(minLength: 0)
             if let item = player.currentItem {
                 let isFavorite = favorites.contains(item)
                 Button { favorites.toggle(item) } label: {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(isFavorite ? Color.pink : Color.white.opacity(0.76))
+                        .font(.system(size: 21, weight: .medium))
+                        .foregroundStyle(isFavorite ? Color.pink : Color.white.opacity(0.72))
+                        .frame(width: 48, height: 48)
+                        .contentShape(Circle())
                 }
                 .buttonStyle(MusicPressStyle())
                 .accessibilityLabel(isFavorite ? "Remove Favorite" : "Add to Favorites")
             }
         }
-        .padding(14)
-        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
     }
 
     private var deckProgress: some View {
         VStack(spacing: 10) {
             WaveformView(store: player.waveformStore, clock: player.clock) { player.seek(to: $0) }
-                .frame(height: 54)
+                .frame(height: 38)
             PlaybackTimeLabels(clock: player.clock)
         }
         .padding(.horizontal, 2)
     }
 
     private var deckTransport: some View {
-        HStack(spacing: 0) {
-            Button { player.shuffleEnabled.toggle() } label: {
-                Image(systemName: "shuffle")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(player.shuffleEnabled ? Color.cyan : Color.white.opacity(0.48))
-                    .frame(width: 34, height: 56)
-            }
-            .buttonStyle(MusicPressStyle())
-            Spacer(minLength: 2)
-            playerActionButton("backward.end.fill", label: "Previous track", size: 20) { player.previousTrack() }
-            Spacer(minLength: 2)
+        HStack(spacing: 32) {
+            playerActionButton("backward.end.fill", label: "Previous track", size: 21) { player.previousTrack() }
             Button { haptic(); player.togglePlayPause() } label: {
-                HStack(spacing: 9) {
-                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 17, weight: .bold))
-                    Text(player.isPlaying ? "PAUSE" : "PLAY")
-                        .font(.caption.weight(.heavy)).tracking(1.3)
-                }
-                .foregroundStyle(Color(red: 0.03, green: 0.07, blue: 0.11))
-                .frame(width: 100, height: 56)
-                .background(Capsule().fill(Color.cyan.gradient))
-                .shadow(color: .cyan.opacity(0.24), radius: 15, y: 6)
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 25, weight: .bold))
+                    .foregroundStyle(Color(red: 0.03, green: 0.07, blue: 0.11))
+                    .offset(x: player.isPlaying ? 0 : 2)
+                    .frame(width: 72, height: 72)
+                    .background(Circle().fill(Color.cyan.gradient))
+                    .shadow(color: .cyan.opacity(0.24), radius: 18, y: 7)
             }
             .buttonStyle(MusicPressStyle())
             .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
-            Spacer(minLength: 2)
-            playerActionButton("forward.end.fill", label: "Next track", size: 20) { haptic(); player.nextTrack() }
-            Spacer(minLength: 2)
-            Button { showLyrics = true } label: {
-                Image(systemName: "quote.bubble")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.78))
-                    .frame(width: 34, height: 56)
-            }
-            .buttonStyle(MusicPressStyle())
-            .disabled(player.currentItem == nil)
-            .accessibilityLabel("Open lyrics")
+            playerActionButton("forward.end.fill", label: "Next track", size: 21) { haptic(); player.nextTrack() }
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var deckShortcuts: some View {
-        HStack(spacing: 12) {
-            listeningCard(title: "UP NEXT", value: nextTrackTitle, icon: "text.line.first.and.arrowtriangle.forward") {
-                showQueue = true
-            }
-            listeningCard(title: "OUTPUT", value: player.routeName, icon: "airplay.audio") {
-                showFullScreen = true
-            }
+        HStack {
+            deckActionButton("Shuffle", icon: "shuffle", isActive: player.shuffleEnabled) { player.shuffleEnabled.toggle() }
+            Spacer()
+            deckActionButton("Lyrics", icon: "quote.bubble", isActive: false) { showLyrics = true }
+                .disabled(player.currentItem == nil)
+            Spacer()
+            deckActionButton("Queue", icon: "list.bullet", isActive: false) { showQueue = true }
         }
     }
 
     private var deckTuning: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("QUICK TUNING").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.white.opacity(0.55))
-                Spacer()
-                Text(String(format: "%.2f×", player.speed)).font(.caption.monospacedDigit().weight(.bold)).foregroundStyle(.cyan)
-            }
-            HStack(spacing: 10) {
-                ForEach(speedPresets, id: \.self) { value in
-                    Button(String(format: "%g×", value)) { player.setSpeed(value) }
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(abs(player.speed - value) < 0.02 ? Color.black : .white.opacity(0.76))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(abs(player.speed - value) < 0.02 ? Color.cyan : Color.white.opacity(0.07), in: Capsule())
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 10) {
+                    ForEach(speedPresets, id: \.self) { value in
+                        Button(String(format: "%g×", value)) { player.setSpeed(value) }
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(abs(player.speed - value) < 0.02 ? Color.black : .white.opacity(0.76))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                            .background(abs(player.speed - value) < 0.02 ? Color.cyan : Color.white.opacity(0.07), in: Capsule())
+                    }
                 }
-            }
-            DisclosureGroup {
                 PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
-                    .padding(.top, 12)
-            } label: {
-                Label("Advanced playback", systemImage: "slider.horizontal.3")
+            }
+            .padding(.top, 12)
+        } label: {
+            HStack {
+                Label("Playback settings", systemImage: "slider.horizontal.3")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.82))
+                    .foregroundStyle(.white.opacity(0.78))
+                Spacer()
+                Text(String(format: "%.2f×", player.speed))
+                    .font(.caption.monospacedDigit().weight(.semibold)).foregroundStyle(.cyan)
             }
-            .tint(.cyan)
         }
-        .padding(16)
-        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.075), lineWidth: 1))
+        .tint(.cyan)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.09), lineWidth: 1))
     }
 
-    private var nextTrackTitle: String {
-        guard player.queue.indices.contains(player.currentIndex + 1) else { return "Queue & shuffle" }
-        return player.queue[player.currentIndex + 1].title ?? "Untitled"
-    }
-
-    private func listeningCard(title: String, value: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func deckActionButton(_ title: String, icon: String, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(.cyan)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.caption2.weight(.bold)).tracking(1.1).foregroundStyle(.white.opacity(0.46))
-                    Text(value).font(.caption.weight(.semibold)).foregroundStyle(.white).lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(.white.opacity(0.35))
+            VStack(spacing: 7) {
+                Image(systemName: icon).font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(isActive ? Color.cyan : Color.white.opacity(0.62))
+                Text(title).font(.caption2.weight(.medium)).foregroundStyle(.white.opacity(0.58))
             }
-            .padding(13)
-            .frame(maxWidth: .infinity, minHeight: 64)
-            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .frame(width: 68, height: 52)
+            .contentShape(Rectangle())
         }
         .buttonStyle(MusicPressStyle())
     }
