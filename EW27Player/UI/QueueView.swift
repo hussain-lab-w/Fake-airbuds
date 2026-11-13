@@ -4,85 +4,39 @@ import MediaPlayer
 struct QueueView: View {
     @ObservedObject var player: AudioPlayer
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("PLAYING NEXT").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
-                                Text("\(player.queue.count) tracks in your queue")
-                                    .font(.caption.weight(.medium)).foregroundStyle(.white.opacity(0.58))
-                            }
-                            Spacer()
-                            Image(systemName: "text.line.first.and.arrowtriangle.forward")
-                                .font(.system(size: 17, weight: .semibold)).foregroundStyle(.cyan)
-                        }
-                        if let current = player.currentItem {
-                            HStack(spacing: 12) {
-                                queueArtwork(for: current, size: 52)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("NOW PLAYING").font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(.white.opacity(0.45))
-                                    Text(current.title ?? "Untitled").font(.subheadline.weight(.semibold)).foregroundStyle(.white).lineLimit(1)
-                                    Text(current.artist ?? "").font(.caption).foregroundStyle(.white.opacity(0.52)).lineLimit(1)
+                queueHeader
+
+                if player.queue.isEmpty {
+                    emptyQueueRow
+                } else {
+                    ForEach(player.queue, id: \.persistentID) { item in
+                        if let index = player.queue.firstIndex(where: { $0.persistentID == item.persistentID }) {
+                            QueueRow(
+                                item: item,
+                                index: index,
+                                isCurrent: index == player.currentIndex,
+                                reduceMotion: reduceMotion,
+                                onPlay: { player.jumpToQueue(index: index) }
+                            )
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    player.removeFromQueue(at: IndexSet(integer: index))
+                                } label: {
+                                    Label("Remove", systemImage: "trash")
                                 }
-                                Spacer(minLength: 0)
-                                Image(systemName: "waveform")
-                                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(.cyan)
-                                    .symbolEffect(.pulse, options: .repeating)
                             }
                         }
                     }
-                    .padding(16)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(LinearGradient(colors: [.white.opacity(0.23), .white.opacity(0.045)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                    }
-                    .shadow(color: .black.opacity(0.20), radius: 18, y: 8)
-                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 14, trailing: 16))
-                    .listRowBackground(Color.clear)
+                    .onDelete { player.removeFromQueue(at: $0) }
+                    .onMove { player.moveQueue(from: $0, to: $1) }
                 }
-                ForEach(Array(player.queue.enumerated()), id: \.element.persistentID) { index, item in
-                    Button { player.jumpToQueue(index: index) } label: {
-                        HStack(spacing: 12) {
-                            Text(String(format: "%02d", index + 1))
-                                .font(.caption.monospacedDigit().weight(.semibold))
-                                .foregroundStyle(index == player.currentIndex ? .cyan : .white.opacity(0.35))
-                                .frame(width: 28, alignment: .leading)
-                            queueArtwork(for: item, size: 46)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(item.title ?? "Untitled")
-                                    .font(.subheadline.weight(index == player.currentIndex ? .semibold : .medium))
-                                    .foregroundStyle(index == player.currentIndex ? .cyan : .white)
-                                    .lineLimit(1)
-                                Text(item.artist ?? "").font(.caption).foregroundStyle(.white.opacity(0.48)).lineLimit(1)
-                            }
-                            Spacer()
-                            if index == player.currentIndex {
-                                Image(systemName: "waveform")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(.cyan)
-                                    .symbolEffect(.pulse, options: .repeating)
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 11)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(index == player.currentIndex ? Color.cyan.opacity(0.28) : Color.white.opacity(0.08), lineWidth: 1)
-                        }
-                        .shadow(color: .black.opacity(0.10), radius: 10, y: 4)
-                    }
-                    .buttonStyle(MusicPressStyle())
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                    .listRowBackground(Color.clear)
-                }
-                .onDelete { player.removeFromQueue(at: $0) }
-                .onMove { player.moveQueue(from: $0, to: $1) }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -95,29 +49,164 @@ struct QueueView: View {
                         .buttonStyle(MusicPressStyle())
                         .accessibilityLabel("Close queue")
                 }
-                ToolbarItem(placement: .topBarTrailing) { EditButton() }
+                if !player.queue.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) { EditButton() }
+                }
+            }
+            .transaction { transaction in
+                // Avoid animating every queue row when playback state changes.
+                transaction.animation = nil
             }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(32)
-        .animation(.spring(response: 0.42, dampingFraction: 0.82), value: player.currentItem?.persistentID)
     }
 
-    @ViewBuilder
-    private func queueArtwork(for item: MPMediaItem, size: CGFloat) -> some View {
+    private var queueHeader: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("PLAYING NEXT")
+                            .font(.caption2.weight(.bold))
+                            .tracking(1.5)
+                            .foregroundStyle(.cyan)
+                        Text("\(player.queue.count) tracks in your queue")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.58))
+                    }
+                    Spacer()
+                    Image(systemName: "text.line.first.and.arrowtriangle.forward")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                }
+
+                if let current = player.currentItem {
+                    HStack(spacing: 12) {
+                        QueueArtworkView(item: current, size: 52)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("NOW PLAYING")
+                                .font(.caption2.weight(.bold))
+                                .tracking(1.2)
+                                .foregroundStyle(.white.opacity(0.45))
+                            Text(current.title ?? "Untitled")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                            Text(current.artist ?? "")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.52))
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "waveform")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.cyan)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+            .padding(16)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(LinearGradient(colors: [.white.opacity(0.23), .white.opacity(0.045)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+            }
+            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 14, trailing: 16))
+            .listRowBackground(Color.clear)
+        }
+    }
+
+    private var emptyQueueRow: some View {
+        ContentUnavailableView {
+            Label("Queue is empty", systemImage: "text.line.first.and.arrowtriangle.forward")
+        } description: {
+            Text("Choose a song from your library to start playback.")
+        }
+        .foregroundStyle(.white.opacity(0.72))
+        .listRowBackground(Color.clear)
+    }
+}
+
+private struct QueueRow: View {
+    let item: MPMediaItem
+    let index: Int
+    let isCurrent: Bool
+    let reduceMotion: Bool
+    let onPlay: () -> Void
+
+    var body: some View {
+        Button(action: onPlay) {
+            HStack(spacing: 12) {
+                Text(String(format: "%02d", index + 1))
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(isCurrent ? .cyan : .white.opacity(0.35))
+                    .frame(width: 28, alignment: .leading)
+
+                QueueArtworkView(item: item, size: 46)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.title ?? "Untitled")
+                        .font(.subheadline.weight(isCurrent ? .semibold : .medium))
+                        .foregroundStyle(isCurrent ? .cyan : .white)
+                        .lineLimit(1)
+                    Text(item.artist ?? "")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.48))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+                if isCurrent {
+                    Image(systemName: "waveform")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.cyan)
+                        .accessibilityLabel("Currently playing")
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .background(isCurrent ? Color.cyan.opacity(0.10) : Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isCurrent ? Color.cyan.opacity(0.28) : Color.white.opacity(0.07), lineWidth: 1)
+            }
+        }
+        .buttonStyle(MusicPressStyle())
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: isCurrent)
+        .accessibilityLabel("\(item.title ?? "Untitled"), \(item.artist ?? "Unknown artist")")
+        .accessibilityHint(isCurrent ? "Currently playing" : "Play this track")
+    }
+}
+
+private struct QueueArtworkView: View {
+    let item: MPMediaItem
+    let size: CGFloat
+    @State private var image: UIImage?
+
+    var body: some View {
         Group {
-            if let image = ArtworkCache.shared.image(for: item.persistentID, artwork: item.artwork, size: CGSize(width: size * 2, height: size * 2)) {
-                Image(uiImage: image).resizable().scaledToFill()
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
             } else {
                 ZStack {
                     LinearGradient(colors: [.cyan.opacity(0.52), .blue.opacity(0.38), .purple.opacity(0.46)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    Image(systemName: "music.note").font(.system(size: size * 0.34, weight: .semibold)).foregroundStyle(.white.opacity(0.9))
+                    Image(systemName: "music.note")
+                        .font(.system(size: size * 0.34, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.9))
                 }
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous).stroke(.white.opacity(0.11), lineWidth: 1))
+        .task(id: item.persistentID) {
+            let target = CGSize(width: size * 2, height: size * 2)
+            image = ArtworkCache.shared.image(for: item.persistentID, artwork: item.artwork, size: target)
+        }
+        .accessibilityHidden(true)
     }
 }

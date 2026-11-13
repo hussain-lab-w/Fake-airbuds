@@ -210,7 +210,6 @@ struct ContentView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-            .animation(.easeInOut(duration: 0.24), value: player.currentItem?.persistentID)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if player.currentItem != nil && selectedTab != .player {
                     miniPlayer
