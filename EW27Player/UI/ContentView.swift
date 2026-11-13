@@ -360,6 +360,13 @@ struct ContentView: View {
             .frame(maxWidth: 350)
             .aspectRatio(1, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(alignment: .bottom) {
+                if player.currentItem != nil {
+                    LyricsPreviewCard(player: player, store: player.lyricsStore) { showLyrics = true }
+                        .padding(14)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
             .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(.white.opacity(0.16), lineWidth: 1))
             .shadow(color: (Color(uiColor: player.artworkTint ?? .systemBlue)).opacity(0.20), radius: 32, y: 16)
             .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.025 : 1)
@@ -407,8 +414,8 @@ struct ContentView: View {
 
     private var deckProgress: some View {
         VStack(spacing: 10) {
-            WaveformView(store: player.waveformStore, clock: player.clock) { player.seek(to: $0) }
-                .frame(height: 38)
+            SlimPlaybackProgressBar(clock: player.clock) { player.seek(to: $0) }
+                .frame(height: 20)
             PlaybackTimeLabels(clock: player.clock)
         }
         .padding(.horizontal, 2)
@@ -700,5 +707,113 @@ struct ContentView: View {
     private func haptic() {
         let enabled = UserDefaults.standard.object(forKey: "ew27.haptics.enabled") as? Bool ?? true
         if enabled { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+    }
+}
+
+private struct LyricsPreviewCard: View {
+    @ObservedObject var player: AudioPlayer
+    @ObservedObject var store: LyricsStore
+    let onOpen: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !player.isPlaying)) { context in
+            let lyrics = store.lyrics
+            let lines = lyrics?.lines ?? []
+            let time = player.lyricPlaybackTime(at: context.date) + store.syncOffset
+            let activeIndex: Int? = lines.lastIndex(where: { $0.start <= time }) ?? (lines.isEmpty ? nil : 0)
+            let previewText: String? = activeIndex.map { lines[$0].words.map(\.text).joined() }
+                ?? lyrics?.plainText.components(separatedBy: .newlines).first
+            let cleanText = previewText?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            Button(action: onOpen) {
+                HStack(spacing: 12) {
+                    Image(systemName: "quote.opening")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                        .frame(width: 36, height: 36)
+                        .background(.cyan.opacity(0.12), in: Circle())
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Text("LYRICS").font(.caption2.weight(.bold)).tracking(1.4)
+                            if lyrics?.hasWordTiming == true {
+                                Circle().fill(.cyan).frame(width: 4, height: 4)
+                                Text("WORD-SYNCED").font(.system(size: 9, weight: .bold)).tracking(0.7)
+                            }
+                        }
+                        .foregroundStyle(.white.opacity(0.58))
+
+                        if let cleanText, !cleanText.isEmpty {
+                            Text(cleanText)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                                .id(activeIndex ?? -1)
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
+                        } else {
+                            Text(store.isLoading ? "Finding lyrics…" : "Tap to open lyrics")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.78))
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(LinearGradient(colors: [.white.opacity(0.30), .white.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.24), radius: 16, y: 8)
+            }
+            .buttonStyle(MusicPressStyle())
+            .accessibilityLabel(cleanText.map { "Open lyrics. \($0)" } ?? "Open lyrics")
+            .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.84), value: activeIndex)
+        }
+    }
+}
+
+private struct SlimPlaybackProgressBar: View {
+    @ObservedObject var clock: PlaybackClock
+    let onSeek: (TimeInterval) -> Void
+    @State private var scrubFraction: Double?
+
+    var body: some View {
+        GeometryReader { geometry in
+            let current = clock.duration > 0 ? clock.elapsed / clock.duration : 0
+            let progress = min(1, max(0, scrubFraction ?? current))
+            let width = max(0, geometry.size.width)
+
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.24)).frame(height: 4)
+                Capsule().fill(.cyan).frame(width: width * CGFloat(progress), height: 4)
+                Circle()
+                    .fill(.white)
+                    .frame(width: 10, height: 10)
+                    .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
+                    .offset(x: max(0, width * CGFloat(progress) - 5))
+            }
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        scrubFraction = min(1, max(0, value.location.x / max(1, width)))
+                    }
+                    .onEnded { value in
+                        let target = min(1, max(0, value.location.x / max(1, width)))
+                        onSeek(target * clock.duration)
+                        scrubFraction = nil
+                    }
+            )
+            .accessibilityElement()
+            .accessibilityLabel("Playback progress")
+            .accessibilityValue(String(format: "%.0f percent", progress * 100))
+        }
     }
 }
