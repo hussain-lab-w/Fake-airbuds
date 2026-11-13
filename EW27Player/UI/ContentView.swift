@@ -228,12 +228,12 @@ struct ContentView: View {
     private var soundTab: some View {
         NavigationStack {
             appList {
-                soundOverviewSection
-                eqSection
+                studioHeaderSection
                 AudioEffectsSection(player: player)
+                eqSection
                 SettingsSection(player: player)
             }
-            .navigationTitle("Sound")
+            .navigationTitle("Studio")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -286,28 +286,47 @@ struct ContentView: View {
         }
     }
 
-    private var soundOverviewSection: some View {
+    private var studioHeaderSection: some View {
         Section {
-            HStack(spacing: 14) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.cyan)
-                    .frame(width: 52, height: 52)
-                    .background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("SOUND STUDIO").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
-                    Text("\(player.activeEQProfileName ?? "Flat") · \(player.reverbMode) reverb")
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(.white).lineLimit(1)
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 14) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                        .frame(width: 52, height: 52)
+                        .background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("SOUND STUDIO").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
+                        Text(player.selectedPreset.rawValue)
+                            .font(.title3.weight(.bold)).foregroundStyle(.white)
+                        Text(player.eqEnabled ? "EQ active · \(player.reverbMode) space" : "EQ bypassed · \(player.reverbMode) space")
+                            .font(.caption).foregroundStyle(.white.opacity(0.50)).lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    Circle().fill(player.eqEnabled ? Color.green : Color.white.opacity(0.30)).frame(width: 8, height: 8)
                 }
-                Spacer(minLength: 0)
-                Circle().fill(player.eqEnabled ? Color.green : Color.white.opacity(0.30)).frame(width: 8, height: 8)
+                HStack(spacing: 8) {
+                    studioFact(icon: "airplay.audio", text: player.routeName)
+                    studioFact(icon: "waveform", text: player.audioQualityLabel)
+                }
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
             .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.09), lineWidth: 1))
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
+    }
+
+    private func studioFact(icon: String, text: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.white.opacity(0.52))
+            .lineLimit(1)
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(.white.opacity(0.06), in: Capsule())
     }
 
     private var miniPlayer: some View {

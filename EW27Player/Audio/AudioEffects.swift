@@ -33,7 +33,6 @@ struct AudioEffectPreset: Codable, Identifiable {
     var wet: Float
 }
 
-
 private struct BuiltInAudioProfile: Identifiable {
     let id: String
     let title: String
@@ -238,6 +237,9 @@ struct AudioEffectsSection: View {
     @ObservedObject var player: AudioPlayer
     @State private var presetName = ""
     @State private var sleepMinutes = 30
+    @State private var spatialExpanded = true
+    @State private var playbackExpanded = false
+    @State private var presetsExpanded = false
 
     private let builtInProfiles: [BuiltInAudioProfile] = [
         BuiltInAudioProfile(id: "balanced", title: "Balanced", subtitle: "Natural", icon: "waveform", preset: .flat, reverb: "Off"),
@@ -249,169 +251,32 @@ struct AudioEffectsSection: View {
 
     var body: some View {
         Section {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        EW27SectionLabel("Audio Profiles", systemImage: "slider.horizontal.3")
-                        Spacer()
-                        Text(player.selectedPreset.rawValue)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.48))
-                    }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(builtInProfiles) { profile in
-                                let selected = player.selectedPreset == profile.preset && player.reverbMode == profile.reverb
-                                Button {
-                                    player.applyPreset(profile.preset)
-                                    player.setReverb(mode: profile.reverb)
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 7) {
-                                        Image(systemName: profile.icon)
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Text(profile.title)
-                                            .font(.caption.weight(.bold))
-                                        Text(profile.subtitle)
-                                            .font(.system(size: 10, weight: .medium))
-                                            .foregroundStyle(.white.opacity(selected ? 0.72 : 0.45))
-                                            .lineLimit(1)
-                                    }
-                                    .foregroundStyle(selected ? Color.black : Color.white.opacity(0.82))
-                                    .frame(width: 112, alignment: .leading)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 11)
-                                    .background(selected ? Color.cyan : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(selected ? Color.white.opacity(0.24) : Color.white.opacity(0.08), lineWidth: 1))
-                                }
-                                .buttonStyle(MusicPressStyle())
-                                .accessibilityLabel("Audio profile \(profile.title)")
-                                .accessibilityHint(profile.subtitle)
-                            }
-                        }
-                    }
-                }
-
+            VStack(alignment: .leading, spacing: 14) {
+                profileStrip
                 Divider().overlay(.white.opacity(0.08))
-
-                HStack {
-                    Label("Reverb", systemImage: "waveform.path")
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Picker("Reverb", selection: Binding(get: { player.reverbMode }, set: { player.setReverb(mode: $0) })) {
-                        Text("Off").tag("Off")
-                        Text("Room").tag("Room")
-                        Text("Hall").tag("Hall")
-                        Text("Cathedral").tag("Cathedral")
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .tint(.cyan)
-                }
-                VStack(spacing: 5) {
-                    HStack {
-                        Text("Wet level")
-                        Spacer()
-                        Text(String(format: "%.0f%%", player.reverbWet))
-                            .font(.caption.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(.cyan)
-                    }
-                    Slider(value: Binding(get: { Double(player.reverbWet) }, set: { player.setReverbWet(Float($0)) }), in: 0...100)
-                        .tint(.cyan)
-                }
-                Button { player.applySlowedReverbPreset() } label: {
-                    Label("Slowed + Reverb", systemImage: "sparkles")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent)
-
-                Divider().overlay(.white.opacity(0.08))
-
-                Toggle(isOn: Binding(get: { player.eightDEnabled }, set: { player.setEightD(enabled: $0) })) {
-                    Label("8D Auto-pan", systemImage: "arrow.left.and.right.circle")
-                        .font(.subheadline.weight(.semibold))
+                DisclosureGroup(isExpanded: $spatialExpanded) {
+                    spatialControls
+                        .padding(.top, 8)
+                } label: {
+                    studioDisclosureLabel("Spatial", icon: "dot.radiowaves.left.and.right", detail: spatialDetail)
                 }
                 .tint(.cyan)
-                VStack(spacing: 5) {
-                    HStack {
-                        Text("Pan speed")
-                        Spacer()
-                        Text(String(format: "%.2f×", player.eightDSpeed))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    Slider(value: Binding(get: { player.eightDSpeed }, set: { player.setEightDSpeed($0) }), in: 0.03...1.5)
-                        .tint(.cyan)
-                }
-
                 Divider().overlay(.white.opacity(0.08))
-
-                HStack {
-                    Label("Sleep timer", systemImage: "moon.zzz")
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Picker("Sleep timer", selection: $sleepMinutes) {
-                        Text("Off").tag(0)
-                        Text("15 min").tag(15)
-                        Text("30 min").tag(30)
-                        Text("60 min").tag(60)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .tint(.cyan)
-                    .onChange(of: sleepMinutes) { _, value in player.startSleepTimer(minutes: value) }
+                DisclosureGroup(isExpanded: $playbackExpanded) {
+                    playbackControls
+                        .padding(.top, 8)
+                } label: {
+                    studioDisclosureLabel("Playback tools", icon: "waveform.path", detail: playbackDetail)
                 }
-                if let remaining = player.sleepRemaining {
-                    Label(String(format: "Sleep in %.0f sec", remaining), systemImage: "timer")
-                        .font(.caption)
-                        .foregroundStyle(.cyan)
-                }
-                VStack(spacing: 5) {
-                    HStack {
-                        Label("Crossfade", systemImage: "arrow.left.arrow.right")
-                            .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Text(String(format: "%.0fs", player.crossfadeSeconds))
-                            .font(.caption.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(.cyan)
-                    }
-                    Slider(value: Binding(get: { player.crossfadeSeconds }, set: { player.setCrossfade($0) }), in: 0...12)
-                        .tint(.cyan)
-                }
-
-                HStack(spacing: 8) {
-                    Button("A: mark") { player.setLoopA() }
-                    Button("B: mark") { player.setLoopB() }
-                    Button("Clear A-B") { player.clearABLoop() }
-                }
-                .buttonStyle(.bordered)
                 .tint(.cyan)
-
                 Divider().overlay(.white.opacity(0.08))
-
-                HStack(spacing: 10) {
-                    TextField("Preset name", text: $presetName)
-                        .textFieldStyle(.roundedBorder)
-                    Button { player.saveEffectPreset(named: presetName); presetName = "" } label: {
-                        Image(systemName: "plus")
-                            .font(.headline.weight(.bold))
-                            .frame(width: 38, height: 38)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityLabel("Save preset")
+                DisclosureGroup(isExpanded: $presetsExpanded) {
+                    savedPresetsControls
+                        .padding(.top, 8)
+                } label: {
+                    studioDisclosureLabel("Saved profiles", icon: "square.stack.3d.up", detail: player.customEffectPresets.isEmpty ? "None yet" : "\(player.customEffectPresets.count) saved")
                 }
-                ForEach(player.customEffectPresets) { preset in
-                    HStack {
-                        Button { player.applyEffectPreset(named: preset.name) } label: {
-                            Label(preset.name, systemImage: "slider.horizontal.3")
-                                .font(.subheadline.weight(.medium))
-                        }
-                        Spacer()
-                        Button("Delete", role: .destructive) { player.deleteEffectPreset(named: preset.name) }
-                            .font(.caption.weight(.medium))
-                    }
-                }
+                .tint(.cyan)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -419,7 +284,211 @@ struct AudioEffectsSection: View {
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
             .listRowBackground(Color.clear)
         } header: {
-            EW27SectionLabel("Effects & Playback", systemImage: "slider.horizontal.3")
+            EW27SectionLabel("Sound design", systemImage: "slider.horizontal.3")
+        }
+    }
+
+    private var profileStrip: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("ACTIVE PROFILE")
+                        .font(.caption2.weight(.bold))
+                        .tracking(1.3)
+                        .foregroundStyle(EW27Design.cyan)
+                    Text(player.selectedPreset.rawValue)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+                Spacer()
+                Text(player.eqEnabled ? "EQ ON" : "BYPASSED")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(player.eqEnabled ? .green : .white.opacity(0.42))
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 9) {
+                    ForEach(builtInProfiles) { profile in
+                        let selected = player.selectedPreset == profile.preset && player.reverbMode == profile.reverb
+                        Button {
+                            player.applyPreset(profile.preset)
+                            player.setReverb(mode: profile.reverb)
+                        } label: {
+                            HStack(spacing: 7) {
+                                Image(systemName: profile.icon)
+                                    .font(.caption.weight(.semibold))
+                                Text(profile.title)
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .foregroundStyle(selected ? Color.black : Color.white.opacity(0.76))
+                            .padding(.horizontal, 12)
+                            .frame(height: 36)
+                            .background(selected ? Color.cyan : Color.white.opacity(0.07), in: Capsule())
+                            .overlay(Capsule().stroke(selected ? Color.cyan.opacity(0.9) : Color.white.opacity(0.08), lineWidth: 1))
+                        }
+                        .buttonStyle(MusicPressStyle())
+                        .accessibilityLabel("Audio profile \(profile.title)")
+                        .accessibilityHint(profile.subtitle)
+                    }
+                }
+            }
+        }
+    }
+
+    private var spatialDetail: String {
+        if player.eightDEnabled { return "8D on · \(player.reverbMode)" }
+        return player.reverbMode == "Off" ? "Clean stereo" : player.reverbMode
+    }
+
+    private var playbackDetail: String {
+        if let remaining = player.sleepRemaining { return "Sleep \(Int(remaining / 60))m" }
+        if player.crossfadeSeconds > 0 { return "Crossfade \(Int(player.crossfadeSeconds))s" }
+        return "Crossfade off"
+    }
+
+    private func studioDisclosureLabel(_ title: String, icon: String, detail: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(EW27Design.cyan)
+                .frame(width: 28, height: 28)
+                .background(EW27Design.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                Text(detail).font(.caption2).foregroundStyle(.white.opacity(0.42))
+            }
+        }
+    }
+
+    private var spatialControls: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Reverb", systemImage: "waveform.path")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Picker("Reverb", selection: Binding(get: { player.reverbMode }, set: { player.setReverb(mode: $0) })) {
+                    Text("Off").tag("Off")
+                    Text("Room").tag("Room")
+                    Text("Hall").tag("Hall")
+                    Text("Cathedral").tag("Cathedral")
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(.cyan)
+            }
+            if player.reverbMode != "Off" {
+                HStack {
+                    Text("Space")
+                    Spacer()
+                    Text(String(format: "%.0f%%", player.reverbWet))
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.cyan)
+                }
+                Slider(value: Binding(get: { Double(player.reverbWet) }, set: { player.setReverbWet(Float($0)) }), in: 0...100)
+                    .tint(.cyan)
+            }
+            Button { player.applySlowedReverbPreset() } label: {
+                Label("Slowed + Reverb", systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .tint(.cyan)
+            Toggle(isOn: Binding(get: { player.eightDEnabled }, set: { player.setEightD(enabled: $0) })) {
+                Label("8D Auto-pan", systemImage: "arrow.left.and.right.circle")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .tint(.cyan)
+            if player.eightDEnabled {
+                HStack {
+                    Text("Pan speed")
+                    Spacer()
+                    Text(String(format: "%.2f×", player.eightDSpeed))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: Binding(get: { player.eightDSpeed }, set: { player.setEightDSpeed($0) }), in: 0.03...1.5)
+                    .tint(.cyan)
+            }
+        }
+    }
+
+    private var playbackControls: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Sleep timer", systemImage: "moon.zzz")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Picker("Sleep timer", selection: $sleepMinutes) {
+                    Text("Off").tag(0)
+                    Text("15 min").tag(15)
+                    Text("30 min").tag(30)
+                    Text("60 min").tag(60)
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(.cyan)
+                .onChange(of: sleepMinutes) { _, value in player.startSleepTimer(minutes: value) }
+            }
+            if let remaining = player.sleepRemaining {
+                Label(String(format: "Sleep in %.0f sec", remaining), systemImage: "timer")
+                    .font(.caption)
+                    .foregroundStyle(.cyan)
+            }
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Label("Crossfade", systemImage: "arrow.left.arrow.right")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text(String(format: "%.0fs", player.crossfadeSeconds))
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.cyan)
+                }
+                Slider(value: Binding(get: { player.crossfadeSeconds }, set: { player.setCrossfade($0) }), in: 0...12)
+                    .tint(.cyan)
+            }
+            HStack(spacing: 8) {
+                Button("A: mark") { player.setLoopA() }
+                Button("B: mark") { player.setLoopB() }
+                Button("Clear A-B") { player.clearABLoop() }
+            }
+            .buttonStyle(.bordered)
+            .tint(.cyan)
+        }
+    }
+
+    private var savedPresetsControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                TextField("Name this sound", text: $presetName)
+                    .textFieldStyle(.roundedBorder)
+                Button {
+                    player.saveEffectPreset(named: presetName)
+                    presetName = ""
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.headline.weight(.bold))
+                        .frame(width: 38, height: 38)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.cyan)
+                .accessibilityLabel("Save sound profile")
+            }
+            ForEach(player.customEffectPresets) { preset in
+                HStack {
+                    Button { player.applyEffectPreset(named: preset.name) } label: {
+                        Label(preset.name, systemImage: "slider.horizontal.3")
+                            .font(.subheadline.weight(.medium))
+                    }
+                    Spacer()
+                    Button("Delete", role: .destructive) { player.deleteEffectPreset(named: preset.name) }
+                        .font(.caption.weight(.medium))
+                }
+            }
+            if player.customEffectPresets.isEmpty {
+                Text("Save a combination of EQ, speed and space for quick recall.")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.45))
+            }
         }
     }
 }
