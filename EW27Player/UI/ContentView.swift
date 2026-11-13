@@ -387,13 +387,6 @@ struct ContentView: View {
             .frame(maxWidth: 350)
             .aspectRatio(1, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(alignment: .bottom) {
-                if player.currentItem != nil {
-                    LyricsPreviewCard(player: player, store: player.lyricsStore) { setLyricsVisible(true) }
-                        .padding(14)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
             .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(.white.opacity(0.16), lineWidth: 1))
             .shadow(color: (Color(uiColor: player.artworkTint ?? .systemBlue)).opacity(0.20), radius: 32, y: 16)
             .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.025 : 1)
@@ -403,6 +396,24 @@ struct ContentView: View {
             .animation(.spring(response: 0.55, dampingFraction: 0.78), value: player.currentItem?.persistentID)
             .frame(maxWidth: .infinity)
             .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 28)
+                    .onEnded { value in
+                        guard abs(value.translation.width) > 62,
+                              abs(value.translation.width) > abs(value.translation.height) else { return }
+                        haptic()
+                        if value.translation.width < 0 { player.nextTrack() } else { player.previousTrack() }
+                    }
+            )
+            .simultaneousGesture(
+                TapGesture(count: 2)
+                    .onEnded {
+                        guard let item = player.currentItem else { return }
+                        haptic()
+                        favorites.toggle(item)
+                    }
+            )
+            .accessibilityHint("Swipe left or right to change tracks. Double tap to favorite.")
     }
 
     private var deckIdentity: some View {
@@ -470,7 +481,7 @@ struct ContentView: View {
         HStack {
             deckActionButton("Shuffle", icon: "shuffle", isActive: player.shuffleEnabled) { player.shuffleEnabled.toggle() }
             Spacer()
-            deckActionButton("Lyrics", icon: "quote.bubble", isActive: showLyrics) {
+            deckActionButton("Lyrics", icon: "quote.bubble.fill", isActive: showLyrics) {
                 setLyricsVisible(true)
             }
                 .disabled(player.currentItem == nil)
@@ -735,74 +746,6 @@ struct ContentView: View {
     private func haptic() {
         guard UserDefaults.standard.object(forKey: "ew27.haptics.enabled") as? Bool ?? true else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
-}
-
-private struct LyricsPreviewCard: View {
-    @ObservedObject var player: AudioPlayer
-    @ObservedObject var store: LyricsStore
-    let onOpen: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !player.isPlaying)) { context in
-            let lyrics = store.lyrics
-            let lines = lyrics?.lines ?? []
-            let time = player.lyricPlaybackTime(at: context.date) + store.syncOffset
-            let activeIndex: Int? = lines.lastIndex(where: { $0.start <= time }) ?? (lines.isEmpty ? nil : 0)
-            let previewText: String? = activeIndex.map { lines[$0].words.map(\.text).joined() }
-                ?? lyrics?.plainText.components(separatedBy: .newlines).first
-            let cleanText = previewText?.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            Button(action: onOpen) {
-                HStack(spacing: 12) {
-                    Image(systemName: "quote.opening")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.cyan)
-                        .frame(width: 36, height: 36)
-                        .background(.cyan.opacity(0.12), in: Circle())
-                    VStack(alignment: .leading, spacing: 5) {
-                        HStack(spacing: 6) {
-                            Text("LYRICS").font(.caption2.weight(.bold)).tracking(1.4)
-                            if lyrics?.hasWordTiming == true {
-                                Circle().fill(.cyan).frame(width: 4, height: 4)
-                                Text("WORD-SYNCED").font(.system(size: 9, weight: .bold)).tracking(0.7)
-                            }
-                        }
-                        .foregroundStyle(.white.opacity(0.58))
-
-                        if let cleanText, !cleanText.isEmpty {
-                            Text(cleanText)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .lineLimit(2)
-                                .id(activeIndex ?? -1)
-                                .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
-                        } else {
-                            Text(store.isLoading ? "Finding lyrics…" : "Tap to open lyrics")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.78))
-                        }
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.58))
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 13)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(LinearGradient(colors: [.white.opacity(0.30), .white.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                }
-                .shadow(color: .black.opacity(0.24), radius: 16, y: 8)
-            }
-            .buttonStyle(MusicPressStyle())
-            .accessibilityLabel(cleanText.map { "Open lyrics. \($0)" } ?? "Open lyrics")
-            .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.84), value: activeIndex)
-        }
     }
 }
 

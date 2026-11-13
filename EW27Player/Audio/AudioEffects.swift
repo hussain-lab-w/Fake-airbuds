@@ -33,6 +33,16 @@ struct AudioEffectPreset: Codable, Identifiable {
     var wet: Float
 }
 
+
+private struct BuiltInAudioProfile: Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let icon: String
+    let preset: AudioPlayer.Preset
+    let reverb: String
+}
+
 @MainActor
 extension AudioPlayer {
     var reverbMode: String { EffectsState.shared.reverbMode }
@@ -229,9 +239,60 @@ struct AudioEffectsSection: View {
     @State private var presetName = ""
     @State private var sleepMinutes = 30
 
+    private let builtInProfiles: [BuiltInAudioProfile] = [
+        BuiltInAudioProfile(id: "balanced", title: "Balanced", subtitle: "Natural", icon: "waveform", preset: .flat, reverb: "Off"),
+        BuiltInAudioProfile(id: "bass", title: "Bass", subtitle: "Deeper low end", icon: "speaker.wave.3.fill", preset: .bassBoost, reverb: "Off"),
+        BuiltInAudioProfile(id: "vocal", title: "Vocal", subtitle: "Clear voices", icon: "mic.fill", preset: .vocal, reverb: "Off"),
+        BuiltInAudioProfile(id: "bright", title: "Bright", subtitle: "More detail", icon: "sparkles", preset: .treble, reverb: "Off"),
+        BuiltInAudioProfile(id: "cinema", title: "Cinema", subtitle: "Wide space", icon: "film", preset: .vocal, reverb: "Hall")
+    ]
+
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        EW27SectionLabel("Audio Profiles", systemImage: "slider.horizontal.3")
+                        Spacer()
+                        Text(player.selectedPreset.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.48))
+                    }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(builtInProfiles) { profile in
+                                let selected = player.selectedPreset == profile.preset && player.reverbMode == profile.reverb
+                                Button {
+                                    player.applyPreset(profile.preset)
+                                    player.setReverb(mode: profile.reverb)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 7) {
+                                        Image(systemName: profile.icon)
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Text(profile.title)
+                                            .font(.caption.weight(.bold))
+                                        Text(profile.subtitle)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.white.opacity(selected ? 0.72 : 0.45))
+                                            .lineLimit(1)
+                                    }
+                                    .foregroundStyle(selected ? Color.black : Color.white.opacity(0.82))
+                                    .frame(width: 112, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 11)
+                                    .background(selected ? Color.cyan : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(selected ? Color.white.opacity(0.24) : Color.white.opacity(0.08), lineWidth: 1))
+                                }
+                                .buttonStyle(MusicPressStyle())
+                                .accessibilityLabel("Audio profile \(profile.title)")
+                                .accessibilityHint(profile.subtitle)
+                            }
+                        }
+                    }
+                }
+
+                Divider().overlay(.white.opacity(0.08))
+
                 HStack {
                     Label("Reverb", systemImage: "waveform.path")
                         .font(.subheadline.weight(.semibold))
@@ -354,15 +415,11 @@ struct AudioEffectsSection: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
-            .shadow(color: .black.opacity(0.14), radius: 10, y: 5)
+            .ew27Card(prominent: true)
             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
             .listRowBackground(Color.clear)
         } header: {
-            Label("Effects & Playback", systemImage: "slider.horizontal.3")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(.cyan)
+            EW27SectionLabel("Effects & Playback", systemImage: "slider.horizontal.3")
         }
     }
 }

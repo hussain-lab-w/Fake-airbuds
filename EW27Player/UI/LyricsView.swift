@@ -181,6 +181,7 @@ struct LyricsView: View {
         .padding(.vertical, 7)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Lyrics status: \(sourceBadge)")
+        .accessibilityHint(isSynced ? "Scroll to pause automatic following. Tap Follow lyrics to resume." : "")
     }
 
     private var emptyState: some View {
@@ -292,6 +293,8 @@ struct LyricsView: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(line.words.map { $0.text }.joined(separator: " ")) at \(formatTime(line.start))")
+        .accessibilityHint("Tap to jump to this line. Long press to copy it.")
         .accessibilityAddTraits(.isButton)
     }
 
@@ -315,13 +318,14 @@ struct LyricsView: View {
     private var syncPill: some View {
         if autoScrollPaused {
             Button { resumeAutoScroll() } label: {
-                Label("Sync", systemImage: "arrow.down.circle.fill")
+                Label("Follow lyrics", systemImage: "arrow.down.circle.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
                     .background(.ultraThinMaterial, in: Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderedProminent)
+            .tint(.cyan)
             .padding(.bottom, 140)
             .transition(.opacity)
         }

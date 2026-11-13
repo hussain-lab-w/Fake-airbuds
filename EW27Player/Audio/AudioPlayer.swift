@@ -176,10 +176,10 @@ final class AudioPlayer: ObservableObject {
     func applyPreset(_ preset: Preset) {
         selectedPreset = preset
         switch preset {
-        case .flat: eqGains = [0, 0, 0, 0, 0]; preamp = 0
-        case .bassBoost: eqGains = [5, 3, 0, -1, -2]; preamp = -4
-        case .vocal: eqGains = [-2, -1, 3, 4, 2]; preamp = -2
-        case .treble: eqGains = [-2, -1, 0, 3, 5]; preamp = -4
+        case .flat: eqGains = Array(repeating: 0, count: 10); preamp = 0
+        case .bassBoost: eqGains = [5, 3, 0, -1, -2, 0, 0, 0, 0, 0]; preamp = -4
+        case .vocal: eqGains = [-2, -1, 3, 4, 2, 1, 0, 0, -1, -2]; preamp = -2
+        case .treble: eqGains = [-2, -1, 0, 3, 5, 4, 2, 1, 0, 0]; preamp = -4
         }
         applyEQSettings()
         saveSettingsForCurrentRoute()
