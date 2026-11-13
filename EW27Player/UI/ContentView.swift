@@ -24,7 +24,7 @@ struct ContentView: View {
         case sound
 
         var title: String {
-            switch self { case .player: return "Listen"; case .library: return "Library"; case .sound: return "Studio" }
+            switch self { case .player: return "Player"; case .library: return "Library"; case .sound: return "Studio" }
         }
 
         var icon: String {

@@ -7,7 +7,7 @@ struct LyricsView: View {
     @ObservedObject var store: LyricsStore
     var onReturnToPlayer: (() -> Void)? = nil
 
-    @AppStorage("ew27.lyrics.fontSize.v2") private var fontSize = 30.0
+    @AppStorage("ew27.lyrics.fontSize.v2") private var fontSize = 26.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showImporter = false
     @State private var importError: String?
@@ -269,15 +269,16 @@ struct LyricsView: View {
         let distance = abs(index - max(state.focusIndex, 0))
         let lineTime = mappedTime(time, for: line)
         let relaxed = autoScrollPaused
-        let opacity: Double = isSinging ? 1 : (relaxed ? 0.6 : 0.38)
-        let blurRadius: CGFloat = (reduceMotion || relaxed || isSinging) ? 0 : CGFloat(min(6, Double(max(0, distance - 1)) * 1.5))
-        return FlowLayout(spacing: CGFloat(fontSize) * 0.26) {
+        let lyricSize = min(28, max(22, CGFloat(fontSize)))
+        let opacity: Double = isSinging ? 1 : (relaxed ? 0.68 : 0.52)
+        let blurRadius: CGFloat = (reduceMotion || relaxed || isSinging) ? 0 : CGFloat(min(3, Double(max(0, distance - 1)) * 0.8))
+        return FlowLayout(spacing: lyricSize * 0.22) {
             ForEach(Array(line.words.enumerated()), id: \.offset) { _, word in
-                SyncedLyricWord(word: word, time: lineTime, isActiveLine: isSinging, fontSize: CGFloat(fontSize))
+                SyncedLyricWord(word: word, time: lineTime, isActiveLine: isSinging, fontSize: lyricSize)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .scaleEffect(isSinging || reduceMotion ? 1 : 0.94, anchor: .leading)
+        .scaleEffect(isSinging || reduceMotion ? 1 : 0.97, anchor: .leading)
         .opacity(opacity)
         .blur(radius: blurRadius)
         .animation(lineAnimation, value: state.focusIndex)
@@ -319,13 +320,14 @@ struct LyricsView: View {
         if autoScrollPaused {
             Button { resumeAutoScroll() } label: {
                 Label("Follow lyrics", systemImage: "arrow.down.circle.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.cyan)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 7)
+                    .background(.black.opacity(0.48), in: Capsule())
+                    .overlay(Capsule().stroke(.cyan.opacity(0.38), lineWidth: 1))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.cyan)
+            .buttonStyle(.plain)
             .padding(.bottom, 140)
             .transition(.opacity)
         }
