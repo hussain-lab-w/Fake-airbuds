@@ -71,7 +71,7 @@ struct LyricsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.clear)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: showTransportBar)
+        .animation(reduceMotion ? nil : Motion.crossfade, value: showTransportBar)
         .fileImporter(isPresented: $showImporter, allowedContentTypes: acceptedFileTypes, allowsMultipleSelection: false, onCompletion: handleImport)
         .onDisappear { resumeAutoScrollTask?.cancel() }
     }
@@ -239,11 +239,11 @@ struct LyricsView: View {
                     })
                     .onChange(of: state.scrollID) { _, id in
                         guard !autoScrollPaused, let id else { return }
-                        withAnimation(.easeInOut(duration: 0.72)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
+                        withAnimation(reduceMotion ? nil : Motion.sheet) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
                     }
                     .onChange(of: autoScrollPaused) { _, paused in
                         guard !paused, let id = state.scrollID else { return }
-                        withAnimation(.easeInOut(duration: 0.72)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
+                        withAnimation(reduceMotion ? nil : Motion.sheet) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
                     }
                     .mask(edgeFade(height: geo.size.height))
                 }
