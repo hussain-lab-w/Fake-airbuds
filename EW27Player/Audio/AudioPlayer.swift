@@ -102,6 +102,8 @@ final class AudioPlayer: ObservableObject {
     let timePitch = AVAudioUnitTimePitch()
     let eq = AVAudioUnitEQ(numberOfBands: 16)
     let reverb = AVAudioUnitReverb()
+    let distortion = AVAudioUnitDistortion()
+    let delay = AVAudioUnitDelay()
     let limiter: AVAudioUnitEffect = {
         let description = AudioComponentDescription(componentType: kAudioUnitType_Effect, componentSubType: kAudioUnitSubType_PeakLimiter, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
         return AVAudioUnitEffect(audioComponentDescription: description)
@@ -404,23 +406,32 @@ final class AudioPlayer: ObservableObject {
         limiter.auAudioUnit.shouldBypassEffect = false
         timePitch.pitch = 0
         reverb.wetDryMix = 0
+        distortion.preGain = 0
+        distortion.wetDryMix = 0
+        distortion.bypass = true
+        delay.delayTime = 0.25
+        delay.feedback = 0
+        delay.wetDryMix = 0
+        delay.bypass = true
     }
 
     private func attachNodesIfNeeded() {
-        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, limiter, panMixer] where !engine.attachedNodes.contains(node) { engine.attach(node) }
+        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, distortion, delay, limiter, panMixer] where !engine.attachedNodes.contains(node) { engine.attach(node) }
     }
 
     private func rebuildGraph(format: AVAudioFormat) {
         engine.stop()
         spectrumAnalyzer.remove(from: engine.mainMixerNode)
-        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, limiter, panMixer] where engine.attachedNodes.contains(node) { engine.disconnectNodeOutput(node) }
+        for node in [playerNode as AVAudioNode, fxMixer, varispeed, timePitch, eq, reverb, distortion, delay, limiter, panMixer] where engine.attachedNodes.contains(node) { engine.disconnectNodeOutput(node) }
         attachNodesIfNeeded()
         engine.connect(playerNode, to: fxMixer, format: format)
         engine.connect(fxMixer, to: varispeed, format: format)
         engine.connect(varispeed, to: timePitch, format: format)
         engine.connect(timePitch, to: eq, format: format)
         engine.connect(eq, to: reverb, format: format)
-        engine.connect(reverb, to: limiter, format: format)
+        engine.connect(reverb, to: distortion, format: format)
+        engine.connect(distortion, to: delay, format: format)
+        engine.connect(delay, to: limiter, format: format)
         engine.connect(limiter, to: panMixer, format: format)
         engine.connect(panMixer, to: engine.mainMixerNode, format: format)
         spectrumAnalyzer.install(on: engine.mainMixerNode, model: spectrumModel)

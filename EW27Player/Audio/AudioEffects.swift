@@ -18,6 +18,12 @@ private final class EffectsState {
     var loopA: TimeInterval?
     var loopB: TimeInterval?
     var crossfadeDuration: Double = 0
+    var saturationDrive: Float = 0
+    var saturationMix: Float = 0
+    var echoEnabled = false
+    var echoTime: Double = 0.25
+    var echoFeedback: Float = 0
+    var echoMix: Float = 0
     var savedPan: Float = 0
     var presets: [String: AudioEffectPreset] = [:]
     var lastTrackID: UInt64?
@@ -31,6 +37,12 @@ struct AudioEffectPreset: Codable, Identifiable {
     var speed: Float
     var reverbMode: String
     var wet: Float
+    var saturationDrive: Float? = nil
+    var saturationMix: Float? = nil
+    var echoEnabled: Bool? = nil
+    var echoTime: Double? = nil
+    var echoFeedback: Float? = nil
+    var echoMix: Float? = nil
 }
 
 private struct BuiltInAudioProfile: Identifiable {
@@ -50,6 +62,13 @@ extension AudioPlayer {
     var eightDSpeed: Double { EffectsState.shared.panRate }
     var sleepRemaining: TimeInterval? { EffectsState.shared.sleepDeadline.map { max(0, $0.timeIntervalSinceNow) } }
     var crossfadeSeconds: Double { EffectsState.shared.crossfadeDuration }
+    var saturationEnabled: Bool { EffectsState.shared.saturationMix > 0 && EffectsState.shared.saturationDrive > 0 }
+    var saturationDrive: Float { EffectsState.shared.saturationDrive }
+    var saturationMix: Float { EffectsState.shared.saturationMix }
+    var echoEnabled: Bool { EffectsState.shared.echoEnabled }
+    var echoTime: Double { EffectsState.shared.echoTime }
+    var echoFeedback: Float { EffectsState.shared.echoFeedback }
+    var echoMix: Float { EffectsState.shared.echoMix }
     var abLoopStart: TimeInterval? { EffectsState.shared.loopA }
     var abLoopEnd: TimeInterval? { EffectsState.shared.loopB }
     var customEffectPresets: [AudioEffectPreset] { EffectsState.shared.presets.values.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending } }
@@ -74,6 +93,44 @@ extension AudioPlayer {
     }
 
     func setReverbWet(_ wet: Float) { setReverb(mode: reverbMode, wet: wet) }
+
+    func setSaturation(enabled: Bool, drive: Float? = nil, mix: Float? = nil) {
+        let state = EffectsState.shared
+        if let drive { state.saturationDrive = max(0, min(20, drive)) }
+        if let mix { state.saturationMix = max(0, min(100, mix)) }
+        if enabled {
+            if state.saturationDrive == 0 { state.saturationDrive = 6 }
+            if state.saturationMix == 0 { state.saturationMix = 25 }
+        }
+        let active = enabled && state.saturationDrive > 0 && state.saturationMix > 0
+        distortion.preGain = active ? min(20, state.saturationDrive) : 0
+        distortion.wetDryMix = active ? state.saturationMix : 0
+        distortion.bypass = !active
+        storeEffectsForRoute()
+        objectWillChange.send()
+    }
+
+    func setSaturationDrive(_ drive: Float) { setSaturation(enabled: drive > 0, drive: drive) }
+    func setSaturationMix(_ mix: Float) { setSaturation(enabled: mix > 0, mix: mix) }
+
+    func setEcho(enabled: Bool, time: Double? = nil, feedback: Float? = nil, mix: Float? = nil) {
+        let state = EffectsState.shared
+        if let time { state.echoTime = max(0.03, min(2, time)) }
+        if let feedback { state.echoFeedback = max(0, min(85, feedback)) }
+        if let mix { state.echoMix = max(0, min(100, mix)) }
+        state.echoEnabled = enabled
+        if enabled && state.echoMix == 0 { state.echoMix = 22 }
+        delay.delayTime = state.echoTime
+        delay.feedback = state.echoFeedback
+        delay.wetDryMix = enabled ? state.echoMix : 0
+        delay.bypass = !enabled || state.echoMix <= 0
+        storeEffectsForRoute()
+        objectWillChange.send()
+    }
+
+    func setEchoTime(_ value: Double) { setEcho(enabled: echoEnabled, time: value) }
+    func setEchoFeedback(_ value: Float) { setEcho(enabled: echoEnabled, feedback: value) }
+    func setEchoMix(_ value: Float) { setEcho(enabled: echoEnabled, mix: value) }
 
     func setEightD(enabled: Bool, speed: Double? = nil) {
         let state = EffectsState.shared
@@ -145,7 +202,20 @@ extension AudioPlayer {
     func saveEffectPreset(named name: String) {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return }
-        EffectsState.shared.presets[clean] = AudioEffectPreset(name: clean, gains: eqGains, preamp: preamp, speed: speed, reverbMode: reverbMode, wet: reverbWet)
+        EffectsState.shared.presets[clean] = AudioEffectPreset(
+            name: clean,
+            gains: eqGains,
+            preamp: preamp,
+            speed: speed,
+            reverbMode: reverbMode,
+            wet: reverbWet,
+            saturationDrive: saturationDrive,
+            saturationMix: saturationMix,
+            echoEnabled: echoEnabled,
+            echoTime: echoTime,
+            echoFeedback: echoFeedback,
+            echoMix: echoMix
+        )
         persistPresets()
         objectWillChange.send()
     }
@@ -157,6 +227,8 @@ extension AudioPlayer {
         applyEQSettingsForEffects()
         setSpeed(preset.speed)
         setReverb(mode: preset.reverbMode, wet: preset.wet)
+        setSaturation(enabled: (preset.saturationDrive ?? 0) > 0 && (preset.saturationMix ?? 0) > 0, drive: preset.saturationDrive ?? 0, mix: preset.saturationMix ?? 0)
+        setEcho(enabled: preset.echoEnabled ?? false, time: preset.echoTime ?? 0.25, feedback: preset.echoFeedback ?? 0, mix: preset.echoMix ?? 0)
         objectWillChange.send()
     }
 
@@ -187,9 +259,19 @@ extension AudioPlayer {
         EffectsState.shared.crossfadeDuration = max(0, min(12, crossfade))
 
         let routes = UserDefaults.standard.dictionary(forKey: "ew27.effects.byRoute.v1") as? [String: [String: Any]] ?? [:]
-        guard let saved = routes[routeName], let mode = saved["mode"] as? String else { return }
-        let wet = (saved["wet"] as? NSNumber)?.floatValue
-        setReverb(mode: mode, wet: wet)
+        guard let saved = routes[routeName] else { return }
+        if let mode = saved["mode"] as? String {
+            let wet = (saved["wet"] as? NSNumber)?.floatValue
+            setReverb(mode: mode, wet: wet)
+        }
+        let drive = (saved["saturationDrive"] as? NSNumber)?.floatValue ?? 0
+        let saturationMix = (saved["saturationMix"] as? NSNumber)?.floatValue ?? 0
+        setSaturation(enabled: drive > 0 && saturationMix > 0, drive: drive, mix: saturationMix)
+        let echoEnabled = saved["echoEnabled"] as? Bool ?? false
+        let echoTime = (saved["echoTime"] as? NSNumber)?.doubleValue ?? 0.25
+        let echoFeedback = (saved["echoFeedback"] as? NSNumber)?.floatValue ?? 0
+        let echoMix = (saved["echoMix"] as? NSNumber)?.floatValue ?? 0
+        setEcho(enabled: echoEnabled, time: echoTime, feedback: echoFeedback, mix: echoMix)
     }
 
     private func fadeOutAndPause() {
@@ -238,7 +320,16 @@ extension AudioPlayer {
     private func storeEffectsForRoute() {
         let map = UserDefaults.standard.dictionary(forKey: "ew27.effects.byRoute.v1") as? [String: [String: Any]] ?? [:]
         var updated = map
-        updated[routeName] = ["mode": reverbMode, "wet": Double(reverbWet)]
+        updated[routeName] = [
+            "mode": reverbMode,
+            "wet": Double(reverbWet),
+            "saturationDrive": Double(saturationDrive),
+            "saturationMix": Double(saturationMix),
+            "echoEnabled": echoEnabled,
+            "echoTime": echoTime,
+            "echoFeedback": Double(echoFeedback),
+            "echoMix": Double(echoMix)
+        ]
         UserDefaults.standard.set(updated, forKey: "ew27.effects.byRoute.v1")
     }
 
@@ -252,6 +343,7 @@ struct AudioEffectsSection: View {
     @ObservedObject var player: AudioPlayer
     @State private var presetName = ""
     @State private var sleepMinutes = 30
+    @State private var characterExpanded = true
     @State private var spatialExpanded = true
     @State private var playbackExpanded = false
     @State private var presetsExpanded = false
@@ -268,6 +360,14 @@ struct AudioEffectsSection: View {
         Section {
             VStack(alignment: .leading, spacing: 14) {
                 profileStrip
+                Divider().overlay(.white.opacity(0.08))
+                DisclosureGroup(isExpanded: $characterExpanded) {
+                    characterControls
+                        .padding(.top, 8)
+                } label: {
+                    studioDisclosureLabel("Character", icon: "waveform.badge.plus", detail: characterDetail)
+                }
+                .tint(.cyan)
                 Divider().overlay(.white.opacity(0.08))
                 DisclosureGroup(isExpanded: $spatialExpanded) {
                     spatialControls
@@ -327,6 +427,8 @@ struct AudioEffectsSection: View {
                         Button {
                             player.applyPreset(profile.preset)
                             player.setReverb(mode: profile.reverb)
+                            player.setSaturation(enabled: false)
+                            player.setEcho(enabled: false)
                         } label: {
                             HStack(spacing: 7) {
                                 Image(systemName: profile.icon)
@@ -354,6 +456,13 @@ struct AudioEffectsSection: View {
         return player.reverbMode == "Off" ? "Clean stereo" : player.reverbMode
     }
 
+    private var characterDetail: String {
+        if player.saturationEnabled && player.echoEnabled { return "Drive + Echo" }
+        if player.saturationEnabled { return "Saturation on" }
+        if player.echoEnabled { return "Echo on" }
+        return "Clean signal"
+    }
+
     private var playbackDetail: String {
         if let remaining = player.sleepRemaining { return "Sleep \(Int(remaining / 60))m" }
         if player.crossfadeSeconds > 0 { return "Crossfade \(Int(player.crossfadeSeconds))s" }
@@ -371,6 +480,75 @@ struct AudioEffectsSection: View {
                 Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
                 Text(detail).font(.caption2).foregroundStyle(.white.opacity(0.42))
             }
+        }
+    }
+
+    private var characterControls: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            HStack {
+                Label("Saturation", systemImage: "circle.lefthalf.filled")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Toggle("Saturation", isOn: Binding(get: { player.saturationEnabled }, set: { player.setSaturation(enabled: $0) }))
+                    .labelsHidden()
+                    .tint(.cyan)
+            }
+            HStack {
+                Text("Drive")
+                Spacer()
+                Text(String(format: "%.1f dB", player.saturationDrive))
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.cyan)
+            }
+            Slider(value: Binding(get: { Double(player.saturationDrive) }, set: { player.setSaturationDrive(Float($0)) }), in: 0...20)
+                .tint(.cyan)
+            HStack {
+                Text("Blend")
+                Spacer()
+                Text(String(format: "%.0f%%", player.saturationMix))
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.cyan)
+            }
+            Slider(value: Binding(get: { Double(player.saturationMix) }, set: { player.setSaturationMix(Float($0)) }), in: 0...100)
+                .tint(.cyan)
+
+            Divider().overlay(.white.opacity(0.08))
+
+            HStack {
+                Label("Echo", systemImage: "repeat.1")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Toggle("Echo", isOn: Binding(get: { player.echoEnabled }, set: { player.setEcho(enabled: $0) }))
+                    .labelsHidden()
+                    .tint(.cyan)
+            }
+            HStack {
+                Text("Time")
+                Spacer()
+                Text(String(format: "%.2fs", player.echoTime))
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.cyan)
+            }
+            Slider(value: Binding(get: { player.echoTime }, set: { player.setEchoTime($0) }), in: 0.03...2)
+                .tint(.cyan)
+            HStack {
+                Text("Feedback")
+                Spacer()
+                Text(String(format: "%.0f%%", player.echoFeedback))
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.cyan)
+            }
+            Slider(value: Binding(get: { Double(player.echoFeedback) }, set: { player.setEchoFeedback(Float($0)) }), in: 0...85)
+                .tint(.cyan)
+            HStack {
+                Text("Blend")
+                Spacer()
+                Text(String(format: "%.0f%%", player.echoMix))
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.cyan)
+            }
+            Slider(value: Binding(get: { Double(player.echoMix) }, set: { player.setEchoMix(Float($0)) }), in: 0...100)
+                .tint(.cyan)
         }
     }
 
