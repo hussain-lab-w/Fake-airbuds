@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var showPlaybackSettings = false
     @State private var albumArtMotion = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var playerNamespace
 
     private let speedPresets: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -71,7 +72,7 @@ struct ContentView: View {
             ForEach(AppTab.allCases, id: \.self) { item in
                 let selected = selectedTab == item
                 Button {
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) { selectedTab = item }
+                    withAnimation(reduceMotion ? nil : Motion.snappy) { selectedTab = item }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: item.icon)
@@ -368,6 +369,7 @@ struct ContentView: View {
             }
             .frame(width: 42, height: 42)
             .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .matchedGeometryEffect(id: "player-artwork", in: playerNamespace)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(player.currentItem?.title ?? "No track selected")
@@ -440,6 +442,7 @@ struct ContentView: View {
                         .frame(width: artworkSize, height: artworkSize)
                         .frame(maxWidth: .infinity)
                     deckIdentity
+                    playerSignalChips
                     deckProgress
                     deckTransport
                     if let message = player.playbackMessage {
@@ -537,9 +540,10 @@ struct ContentView: View {
             .rotation3DEffect(.degrees(!reduceMotion && player.isPlaying && albumArtMotion ? 1.5 : 0), axis: (x: 0, y: 1, z: 0))
             .id(player.currentItem?.persistentID)
             .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            .animation(.spring(response: 0.55, dampingFraction: 0.78), value: player.currentItem?.persistentID)
+            .animation(reduceMotion ? nil : Motion.sheet, value: player.currentItem?.persistentID)
             .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .overlay(alignment: .topTrailing) { artworkActionRail }
+            .matchedGeometryEffect(id: "player-artwork", in: playerNamespace)
             .simultaneousGesture(
                 DragGesture(minimumDistance: 28)
                     .onEnded { value in
@@ -558,6 +562,28 @@ struct ContentView: View {
                     }
             )
             .accessibilityHint("Swipe left or right to change tracks. Double tap to favorite.")
+    }
+
+    private var playerSignalChips: some View {
+        HStack(spacing: 7) {
+            signalChip(icon: "waveform", text: player.selectedPreset.rawValue)
+            signalChip(icon: "speedometer", text: String(format: "%.2fx", player.speed))
+            if player.lyricsStore.lyrics != nil {
+                signalChip(icon: "quote.bubble.fill", text: "Lyrics")
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 1)
+    }
+
+    private func signalChip(icon: String, text: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.72))
+            .padding(.horizontal, 9)
+            .frame(height: 28)
+            .background(.white.opacity(0.07), in: Capsule())
+            .overlay(Capsule().stroke(.white.opacity(0.10), lineWidth: 1))
     }
 
     private var artworkActionRail: some View {
@@ -619,6 +645,10 @@ struct ContentView: View {
                 .accessibilityLabel(isFavorite ? "Remove Favorite" : "Add to Favorites")
             }
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
     }
 
     private var deckProgress: some View {
