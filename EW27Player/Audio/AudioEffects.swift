@@ -341,6 +341,7 @@ extension AudioPlayer {
 
 struct AudioEffectsSection: View {
     @ObservedObject var player: AudioPlayer
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var presetName = ""
     @State private var sleepMinutes = 30
     @State private var characterExpanded = true
@@ -361,37 +362,25 @@ struct AudioEffectsSection: View {
             VStack(alignment: .leading, spacing: 14) {
                 profileStrip
                 Divider().overlay(.white.opacity(0.08))
-                DisclosureGroup(isExpanded: $characterExpanded) {
-                    characterControls
-                        .padding(.top, 8)
-                } label: {
-                    studioDisclosureLabel("Character", icon: "waveform.badge.plus", detail: characterDetail)
+                studioDisclosureButton("Character", icon: "waveform.badge.plus", detail: characterDetail, isExpanded: $characterExpanded)
+                if characterExpanded {
+                    characterControls.padding(.top, 8)
                 }
-                .tint(.cyan)
                 Divider().overlay(.white.opacity(0.08))
-                DisclosureGroup(isExpanded: $spatialExpanded) {
-                    spatialControls
-                        .padding(.top, 8)
-                } label: {
-                    studioDisclosureLabel("Spatial", icon: "dot.radiowaves.left.and.right", detail: spatialDetail)
+                studioDisclosureButton("Spatial", icon: "dot.radiowaves.left.and.right", detail: spatialDetail, isExpanded: $spatialExpanded)
+                if spatialExpanded {
+                    spatialControls.padding(.top, 8)
                 }
-                .tint(.cyan)
                 Divider().overlay(.white.opacity(0.08))
-                DisclosureGroup(isExpanded: $playbackExpanded) {
-                    playbackControls
-                        .padding(.top, 8)
-                } label: {
-                    studioDisclosureLabel("Playback tools", icon: "waveform.path", detail: playbackDetail)
+                studioDisclosureButton("Playback tools", icon: "waveform.path", detail: playbackDetail, isExpanded: $playbackExpanded)
+                if playbackExpanded {
+                    playbackControls.padding(.top, 8)
                 }
-                .tint(.cyan)
                 Divider().overlay(.white.opacity(0.08))
-                DisclosureGroup(isExpanded: $presetsExpanded) {
-                    savedPresetsControls
-                        .padding(.top, 8)
-                } label: {
-                    studioDisclosureLabel("Saved profiles", icon: "square.stack.3d.up", detail: player.customEffectPresets.isEmpty ? "None yet" : "\(player.customEffectPresets.count) saved")
+                studioDisclosureButton("Saved profiles", icon: "square.stack.3d.up", detail: player.customEffectPresets.isEmpty ? "None yet" : "\(player.customEffectPresets.count) saved", isExpanded: $presetsExpanded)
+                if presetsExpanded {
+                    savedPresetsControls.padding(.top, 8)
                 }
-                .tint(.cyan)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -481,6 +470,29 @@ struct AudioEffectsSection: View {
                 Text(detail).font(.caption2).foregroundStyle(.white.opacity(0.42))
             }
         }
+    }
+
+    private func studioDisclosureButton(_ title: String, icon: String, detail: String, isExpanded: Binding<Bool>) -> some View {
+        Button {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                isExpanded.wrappedValue.toggle()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                studioDisclosureLabel(title, icon: icon, detail: detail)
+                Spacer(minLength: 8)
+                Image(systemName: isExpanded.wrappedValue ? "chevron.up" : "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.48))
+                    .frame(width: 30, height: 30)
+                    .background(.white.opacity(0.06), in: Circle())
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(MusicPressStyle())
+        .accessibilityLabel("\(title) section")
+        .accessibilityValue(isExpanded.wrappedValue ? "Expanded" : "Collapsed")
+        .accessibilityHint("Double tap to \(isExpanded.wrappedValue ? "collapse" : "expand")")
     }
 
     private var characterControls: some View {
