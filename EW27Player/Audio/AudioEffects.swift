@@ -6,9 +6,9 @@ import SwiftUI
 private final class EffectsState {
     static let shared = EffectsState()
     var reverbMode = "Off"
-    var wet: Float = 30
+    var wet: Float = 0
     var panEnabled = false
-    var panRate: Double = 0.2
+    var panRate: Double = 0
     var phase: Double = 0
     var panTimer: Timer?
     var sleepTimer: Timer?
@@ -37,6 +37,7 @@ struct AudioEffectPreset: Codable, Identifiable {
     var speed: Float
     var reverbMode: String
     var wet: Float
+    var saturationEnabled: Bool? = nil
     var saturationDrive: Float? = nil
     var saturationMix: Float? = nil
     var echoEnabled: Bool? = nil
@@ -78,6 +79,7 @@ extension AudioPlayer {
         state.reverbMode = mode
         if let wet { state.wet = max(0, min(100, wet)) }
         if mode == "Off" {
+            state.wet = 0
             reverb.wetDryMix = 0
         } else {
             switch mode {
@@ -98,10 +100,6 @@ extension AudioPlayer {
         let state = EffectsState.shared
         if let drive { state.saturationDrive = max(0, min(20, drive)) }
         if let mix { state.saturationMix = max(0, min(100, mix)) }
-        if enabled {
-            if state.saturationDrive == 0 { state.saturationDrive = 6 }
-            if state.saturationMix == 0 { state.saturationMix = 25 }
-        }
         let active = enabled && state.saturationDrive > 0 && state.saturationMix > 0
         distortion.preGain = active ? min(20, state.saturationDrive) : 0
         distortion.wetDryMix = active ? state.saturationMix : 0
@@ -119,7 +117,6 @@ extension AudioPlayer {
         if let feedback { state.echoFeedback = max(0, min(85, feedback)) }
         if let mix { state.echoMix = max(0, min(100, mix)) }
         state.echoEnabled = enabled
-        if enabled && state.echoMix == 0 { state.echoMix = 22 }
         delay.delayTime = state.echoTime
         delay.feedback = state.echoFeedback
         delay.wetDryMix = enabled ? state.echoMix : 0
@@ -220,9 +217,10 @@ extension AudioPlayer {
             preamp: preamp,
             speed: speed,
             reverbMode: reverbMode,
-            wet: reverbWet,
-            saturationDrive: saturationDrive,
-            saturationMix: saturationMix,
+            wet: reverbMode == "Off" ? 0 : reverbWet,
+            saturationEnabled: saturationEnabled,
+            saturationDrive: saturationEnabled ? saturationDrive : 0,
+            saturationMix: saturationEnabled ? saturationMix : 0,
             echoEnabled: echoEnabled,
             echoTime: echoTime,
             echoFeedback: echoFeedback,
@@ -239,7 +237,8 @@ extension AudioPlayer {
         applyEQSettingsForEffects()
         setSpeed(preset.speed)
         setReverb(mode: preset.reverbMode, wet: preset.wet)
-        setSaturation(enabled: (preset.saturationDrive ?? 0) > 0 && (preset.saturationMix ?? 0) > 0, drive: preset.saturationDrive ?? 0, mix: preset.saturationMix ?? 0)
+        let presetSaturationEnabled = preset.saturationEnabled ?? false
+        setSaturation(enabled: presetSaturationEnabled, drive: presetSaturationEnabled ? preset.saturationDrive ?? 0 : 0, mix: presetSaturationEnabled ? preset.saturationMix ?? 0 : 0)
         setEcho(enabled: preset.echoEnabled ?? false, time: preset.echoTime ?? 0.25, feedback: preset.echoFeedback ?? 0, mix: preset.echoMix ?? 0)
         objectWillChange.send()
     }
@@ -276,9 +275,14 @@ extension AudioPlayer {
             let wet = (saved["wet"] as? NSNumber)?.floatValue
             setReverb(mode: mode, wet: wet)
         }
+        if (saved["mode"] as? String) == "Off" {
+            EffectsState.shared.wet = 0
+            reverb.wetDryMix = 0
+        }
+        let saturationWasEnabled = saved["saturationEnabled"] as? Bool ?? false
         let drive = (saved["saturationDrive"] as? NSNumber)?.floatValue ?? 0
         let saturationMix = (saved["saturationMix"] as? NSNumber)?.floatValue ?? 0
-        setSaturation(enabled: drive > 0 && saturationMix > 0, drive: drive, mix: saturationMix)
+        setSaturation(enabled: saturationWasEnabled, drive: saturationWasEnabled ? drive : 0, mix: saturationWasEnabled ? saturationMix : 0)
         let echoEnabled = saved["echoEnabled"] as? Bool ?? false
         let echoTime = (saved["echoTime"] as? NSNumber)?.doubleValue ?? 0.25
         let echoFeedback = (saved["echoFeedback"] as? NSNumber)?.floatValue ?? 0
@@ -334,9 +338,10 @@ extension AudioPlayer {
         var updated = map
         updated[routeName] = [
             "mode": reverbMode,
-            "wet": Double(reverbWet),
-            "saturationDrive": Double(saturationDrive),
-            "saturationMix": Double(saturationMix),
+            "wet": reverbMode == "Off" ? 0 : Double(reverbWet),
+            "saturationEnabled": saturationEnabled,
+            "saturationDrive": saturationEnabled ? Double(saturationDrive) : 0,
+            "saturationMix": saturationEnabled ? Double(saturationMix) : 0,
             "echoEnabled": echoEnabled,
             "echoTime": echoTime,
             "echoFeedback": Double(echoFeedback),
