@@ -446,7 +446,7 @@ final class AudioPlayer: ObservableObject {
         generation &+= 1
         let token = generation
         if playerNode.engine != nil { playerNode.stop() }
-        fxMixer.outputVolume = crossfadeSeconds > 0 ? 0 : 1
+        fxMixer.outputVolume = crossfadeSeconds > 0 && shouldPlay ? 0 : 1
         elapsed = 0
         hasFinished = false
         do {

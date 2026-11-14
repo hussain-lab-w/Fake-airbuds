@@ -155,6 +155,18 @@ extension AudioPlayer {
     func setCrossfade(_ seconds: Double) {
         EffectsState.shared.crossfadeDuration = max(0, min(12, seconds))
         UserDefaults.standard.set(EffectsState.shared.crossfadeDuration, forKey: "ew27.crossfade.seconds")
+        guard currentItem != nil else {
+            objectWillChange.send()
+            return
+        }
+        if EffectsState.shared.crossfadeDuration == 0 || !isPlaying {
+            fxMixer.outputVolume = 1
+        } else {
+            let fadeDuration = min(EffectsState.shared.crossfadeDuration, max(0.01, duration / 2))
+            let fadeIn = min(1, max(0, elapsed / fadeDuration))
+            let fadeOut = min(1, max(0, (duration - elapsed) / fadeDuration))
+            fxMixer.outputVolume = Float(min(fadeIn, fadeOut))
+        }
         objectWillChange.send()
     }
 
