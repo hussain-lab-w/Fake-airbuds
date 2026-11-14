@@ -16,7 +16,6 @@ enum LyricsSource: String, Codable {
     case embeddedPlain
     case lrclib
     case netease
-    case appleMusic
     case lyricsOvh
     case imported
 }
