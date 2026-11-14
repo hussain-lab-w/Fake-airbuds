@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var sortOption: LibrarySortOption = .title
     @AppStorage("ew27.vinyl.enabled") private var vinylMode = false
     @State private var showLyrics = false
+    @State private var showPlaybackSettings = false
     @State private var albumArtMotion = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -122,18 +123,24 @@ struct ContentView: View {
                     })
                     .transition(lyricsTransition(edge: .trailing))
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        playerSection
-                            .padding(.horizontal, 20)
-                            .padding(.top, 10)
-                            .padding(.bottom, 22)
-                            .frame(maxWidth: .infinity)
-                    }
+                    playerSection
                     .transition(lyricsTransition(edge: .leading))
                 }
             }
             .animation(lyricsAnimation, value: showLyrics)
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showPlaybackSettings) {
+                NavigationStack {
+                    ScrollView(showsIndicators: false) {
+                        deckTuning
+                            .padding(20)
+                    }
+                    .navigationTitle("Playback settings")
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+                .presentationDetents([.medium, .large])
+                .presentationCornerRadius(30)
+            }
         }
     }
 
@@ -227,11 +234,31 @@ struct ContentView: View {
 
     private var soundTab: some View {
         NavigationStack {
-            appList {
-                studioHeaderSection
-                AudioEffectsSection(player: player)
-                eqSection
-                SettingsSection(player: player)
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 8) {
+                    studioHeaderSection
+                    AudioEffectsSection(player: player)
+                    eqSection
+                    SettingsSection(player: player)
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 92)
+            }
+            .background { ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint) }
+            .scrollBounceBehavior(.basedOnSize)
+            .buttonStyle(MusicPressStyle())
+            .tint(Color(red: 0.38, green: 0.78, blue: 1))
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if player.currentItem != nil {
+                    miniPlayer
+                        .padding(.horizontal, 14)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
+                }
             }
             .navigationTitle("Studio")
             .navigationBarTitleDisplayMode(.inline)
@@ -403,19 +430,26 @@ struct ContentView: View {
     }
 
     private var playerSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            deckHeader
-            deckArtwork
-            deckIdentity
-            deckProgress
-            deckTransport
-            deckShortcuts
-            deckTuning
-            if let message = player.playbackMessage {
-                Label(message, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
+        GeometryReader { proxy in
+            let artworkSize = min(proxy.size.width - 36, max(190, proxy.size.height * 0.49))
+            VStack(alignment: .leading, spacing: 10) {
+                deckHeader
+                deckArtwork
+                    .frame(width: artworkSize, height: artworkSize)
+                    .frame(maxWidth: .infinity)
+                deckIdentity
+                deckProgress
+                deckTransport
+                if let message = player.playbackMessage {
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
             }
+            .padding(.horizontal, 18)
+            .padding(.top, 8)
+            .padding(.bottom, 10)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
     }
 
@@ -434,6 +468,11 @@ struct ContentView: View {
             Menu {
                 Toggle("Vinyl artwork", isOn: $vinylMode)
                 Toggle("Keep pitch", isOn: Binding(get: { player.keepPitch }, set: { player.keepPitch = $0; player.setSpeed(player.speed) }))
+                Button {
+                    showPlaybackSettings = true
+                } label: {
+                    Label("Playback settings", systemImage: "slider.horizontal.3")
+                }
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 16, weight: .semibold))
@@ -457,8 +496,8 @@ struct ContentView: View {
             .id(player.currentItem?.persistentID)
             .transition(.opacity.combined(with: .scale(scale: 0.96)))
             .animation(.spring(response: 0.55, dampingFraction: 0.78), value: player.currentItem?.persistentID)
-            .frame(maxWidth: .infinity)
             .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(alignment: .topTrailing) { artworkActionRail }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 28)
                     .onEnded { value in
@@ -477,6 +516,34 @@ struct ContentView: View {
                     }
             )
             .accessibilityHint("Swipe left or right to change tracks. Double tap to favorite.")
+    }
+
+    private var artworkActionRail: some View {
+        VStack(spacing: 8) {
+            artworkIconButton("quote.bubble.fill", label: "Lyrics", active: showLyrics) {
+                setLyricsVisible(true)
+            }
+            artworkIconButton("list.bullet", label: "Queue", active: false) {
+                showQueue = true
+            }
+            artworkIconButton("shuffle", label: "Shuffle", active: player.shuffleEnabled) {
+                player.shuffleEnabled.toggle()
+            }
+        }
+        .padding(12)
+    }
+
+    private func artworkIconButton(_ icon: String, label: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(active ? Color.black : Color.white)
+                .frame(width: 34, height: 34)
+                .background(active ? Color.cyan : Color.black.opacity(0.46), in: Circle())
+                .overlay(Circle().stroke(.white.opacity(active ? 0.4 : 0.2), lineWidth: 1))
+        }
+        .buttonStyle(MusicPressStyle())
+        .accessibilityLabel(label)
     }
 
     private var deckIdentity: some View {

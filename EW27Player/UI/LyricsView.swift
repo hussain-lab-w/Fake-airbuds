@@ -12,6 +12,7 @@ struct LyricsView: View {
     @State private var showImporter = false
     @State private var importError: String?
     @State private var autoScrollPaused = false
+    @State private var showTransportBar = false
     @State private var resumeAutoScrollTask: Task<Void, Never>?
 
     private static let gapThreshold: TimeInterval = 3.5
@@ -65,12 +66,16 @@ struct LyricsView: View {
                 content
             }
             if isSynced { syncPill }
-            LyricsTransportBar(player: player, clock: player.clock)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 10)
+            if showTransportBar {
+                LyricsTransportBar(player: player, clock: player.clock)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.clear)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: showTransportBar)
         .fileImporter(isPresented: $showImporter, allowedContentTypes: acceptedFileTypes, allowsMultipleSelection: false, onCompletion: handleImport)
         .onDisappear { resumeAutoScrollTask?.cancel() }
     }
@@ -232,7 +237,10 @@ struct LyricsView: View {
                         .padding(.leading, 24)
                         .padding(.trailing, 20)
                     }
-                    .simultaneousGesture(DragGesture(minimumDistance: 3).onChanged { _ in pauseAutoScroll() })
+                    .simultaneousGesture(DragGesture(minimumDistance: 3).onChanged { value in
+                        pauseAutoScroll()
+                        if abs(value.translation.height) > 6 { showTransportBar = true }
+                    })
                     .onChange(of: state.scrollID) { _, id in
                         guard !autoScrollPaused, let id else { return }
                         withAnimation(.easeInOut(duration: 0.72)) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
@@ -328,7 +336,7 @@ struct LyricsView: View {
                     .overlay(Capsule().stroke(.cyan.opacity(0.38), lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .padding(.bottom, 140)
+            .padding(.bottom, showTransportBar ? 140 : 28)
             .transition(.opacity)
         }
     }
@@ -444,6 +452,9 @@ struct LyricsView: View {
             .padding(.top, 14)
             .padding(.bottom, 160)
         }
+        .simultaneousGesture(DragGesture(minimumDistance: 3).onChanged { value in
+            if abs(value.translation.height) > 6 { showTransportBar = true }
+        })
         .mask {
             LinearGradient(
                 stops: [

@@ -14,6 +14,7 @@ final class LyricsStore: ObservableObject {
     private var lookupTask: Task<Void, Never>?
     private var currentItem: MPMediaItem?
     private var currentDuration: TimeInterval = 0
+    private var memoryCache: [UInt64: TrackLyrics] = [:]
 
     init() {
         UserDefaults.standard.register(defaults: [Self.onlineLookupKey: true])
@@ -35,14 +36,22 @@ final class LyricsStore: ObservableObject {
             lyrics = MornyeLyricsTiming.normalized(imported)
             return
         }
-        if let cache = readCache(for: id) {
-            if let cachedLyrics = cache.lyrics {
+        if !force {
+            if let cachedLyrics = memoryCache[id] {
                 lyrics = MornyeLyricsTiming.normalized(cachedLyrics)
                 return
             }
-            if let missUntil = cache.missUntil, missUntil > Date() {
-                lyrics = embeddedLyrics(for: item)
-                return
+            if let cache = readCache(for: id) {
+                if let cachedLyrics = cache.lyrics {
+                    let normalized = MornyeLyricsTiming.normalized(cachedLyrics)
+                    memoryCache[id] = normalized
+                    lyrics = normalized
+                    return
+                }
+                if let missUntil = cache.missUntil, missUntil > Date() {
+                    lyrics = embeddedLyrics(for: item)
+                    return
+                }
             }
         }
         guard UserDefaults.standard.bool(forKey: Self.onlineLookupKey) else {
@@ -84,6 +93,7 @@ final class LyricsStore: ObservableObject {
             return
         }
         guard currentTrackID == persistentID else { return }
+        memoryCache[persistentID] = lyrics
         lookupTask?.cancel()
         lookupTask = nil
         isLoading = false
@@ -112,6 +122,7 @@ final class LyricsStore: ObservableObject {
             let found = candidates.first(where: { $0.hasWordTiming }) ?? candidates.first(where: { $0.isSynced }) ?? candidates.first
             if let found {
                 let normalized = MornyeLyricsTiming.normalized(found)
+                self.memoryCache[id] = normalized
                 self.writeCache(LyricsCache(lyrics: normalized, missUntil: nil), for: id)
                 self.lyrics = normalized
             } else {
@@ -239,6 +250,9 @@ final class LyricsStore: ObservableObject {
     }
 
     private func writeCache(_ cache: LyricsCache, for id: UInt64) {
+        if let cachedLyrics = cache.lyrics {
+            memoryCache[id] = MornyeLyricsTiming.normalized(cachedLyrics)
+        }
         do {
             let url = cacheURL(for: id)
             try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
