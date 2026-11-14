@@ -167,6 +167,7 @@ struct ContentView: View {
         NavigationStack {
             appList {
                 libraryOverviewSection
+                librarySpotlightSection
                 libraryFilterSection
                 allSongsSection
                 playlistsSection
@@ -236,6 +237,7 @@ struct ContentView: View {
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 8) {
                     studioHeaderSection
+                    studioToolsSummary
                     AudioEffectsSection(player: player)
                     eqSection
                     SettingsSection(player: player)
@@ -312,6 +314,38 @@ struct ContentView: View {
         }
     }
 
+    private var librarySpotlightSection: some View {
+        Section {
+            HStack(spacing: 13) {
+                ZStack {
+                    Circle().fill(.cyan.opacity(0.14))
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                }
+                .frame(width: 42, height: 42)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("LOCAL-FIRST LISTENING")
+                        .font(.caption2.weight(.bold))
+                        .tracking(1.2)
+                        .foregroundStyle(.cyan)
+                    Text("Your music stays close and ready.")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                    Text("Search, queue, and play without leaving your library.")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.48))
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(15)
+            .ew27Card()
+            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+            .listRowBackground(Color.clear)
+        }
+    }
+
     private var studioHeaderSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 14) {
@@ -343,6 +377,36 @@ struct ContentView: View {
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
+    }
+
+    private var studioToolsSummary: some View {
+        HStack(spacing: 8) {
+            studioMetric(icon: "waveform.path.ecg", title: "EQ", value: player.eqEnabled ? "Active" : "Flat")
+            studioMetric(icon: "square.stack.3d.up", title: "Space", value: player.reverbMode)
+            studioMetric(icon: "arrow.left.arrow.right", title: "Fade", value: player.crossfadeSeconds > 0 ? "\(Int(player.crossfadeSeconds))s" : "Off")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+    }
+
+    private func studioMetric(icon: String, title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.cyan)
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .tracking(0.8)
+                .foregroundStyle(.white.opacity(0.42))
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.86))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func studioFact(icon: String, text: String) -> some View {
