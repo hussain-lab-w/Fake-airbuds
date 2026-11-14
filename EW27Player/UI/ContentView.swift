@@ -63,7 +63,7 @@ struct ContentView: View {
         .onChange(of: reduceMotion) { _, reduced in
             if reduced { albumArtMotion = false } else { startAlbumArtMotion() }
         }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: selectedTab)
+        .animation(reduceMotion ? nil : Motion.crossfade, value: selectedTab)
     }
 
     private var appTabDock: some View {
@@ -145,9 +145,7 @@ struct ContentView: View {
     }
 
     private var lyricsAnimation: Animation {
-        reduceMotion
-            ? .linear(duration: 0.01)
-            : .spring(response: 0.46, dampingFraction: 0.86, blendDuration: 0.12)
+        reduceMotion ? .linear(duration: 0.01) : Motion.sheet
     }
 
     private func lyricsTransition(edge: Edge) -> AnyTransition {
@@ -431,26 +429,70 @@ struct ContentView: View {
 
     private var playerSection: some View {
         GeometryReader { proxy in
-            let artworkSize = min(proxy.size.width - 36, max(190, proxy.size.height * 0.49))
-            VStack(alignment: .leading, spacing: 10) {
-                deckHeader
-                deckArtwork
-                    .frame(width: artworkSize, height: artworkSize)
-                    .frame(maxWidth: .infinity)
-                deckIdentity
-                deckProgress
-                deckTransport
-                if let message = player.playbackMessage {
-                    Label(message, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
+            if player.currentItem == nil {
+                coldStartState
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+            } else {
+                let artworkSize = min(proxy.size.width - 36, max(190, proxy.size.height * 0.49))
+                VStack(alignment: .leading, spacing: 10) {
+                    deckHeader
+                    deckArtwork
+                        .frame(width: artworkSize, height: artworkSize)
+                        .frame(maxWidth: .infinity)
+                    deckIdentity
+                    deckProgress
+                    deckTransport
+                    if let message = player.playbackMessage {
+                        Label(message, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                 }
+                .padding(.horizontal, 18)
+                .padding(.top, 8)
+                .padding(.bottom, 10)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 8)
-            .padding(.bottom, 10)
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
+    }
+
+    private var coldStartState: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(.cyan.opacity(0.12))
+                    .frame(width: 118, height: 118)
+                Image(systemName: "waveform.and.mic")
+                    .font(.system(size: 42, weight: .medium))
+                    .foregroundStyle(.cyan)
+            }
+            VStack(spacing: 7) {
+                Text("Your listening space")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                Text("Choose a local track to start your session.")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.58))
+                    .multilineTextAlignment(.center)
+            }
+            Button {
+                haptic()
+                withAnimation(reduceMotion ? nil : Motion.sheet) { selectedTab = .library }
+            } label: {
+                Label("Browse library", systemImage: "music.note.list")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 20)
+                    .frame(height: 46)
+                    .background(Color.cyan, in: Capsule())
+            }
+            .buttonStyle(MusicPressStyle())
+            .accessibilityHint("Open your local music library")
+        }
+        .padding(28)
+        .frame(maxWidth: 340)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+        .shadow(color: .black.opacity(0.28), radius: 24, y: 12)
     }
 
     private var deckHeader: some View {

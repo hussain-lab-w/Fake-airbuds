@@ -1,6 +1,12 @@
 import SwiftUI
 import UIKit
 
+enum Motion {
+    static let snappy = Animation.snappy(duration: 0.2)
+    static let sheet = Animation.spring(response: 0.4, dampingFraction: 0.85)
+    static let crossfade = Animation.easeInOut(duration: 0.3)
+}
+
 struct MusicPressStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
