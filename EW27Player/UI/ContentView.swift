@@ -711,8 +711,8 @@ struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+        .liquidGlass(prominent: false)
+
     }
 
     private var deckProgress: some View {
