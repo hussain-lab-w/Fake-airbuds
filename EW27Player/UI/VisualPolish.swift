@@ -236,48 +236,40 @@ struct GlassPanel<Content: View>: View {
 // MARK: - Liquid Glass Modifier
 struct LiquidGlassModifier: ViewModifier {
     var isProminent: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var cornerRadius: CGFloat { isProminent ? 22 : 18 }
     
     func body(content: Content) -> some View {
         content
-            // 1. الطبقة الزجاجية الأساسية
             .background(
-                isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.ultraThinMaterial)
+                isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.ultraThinMaterial),
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             )
-            // 2. طبقة انعكاس الضوء الخفيفة (Liquid Highlight)
-            .background(
+            .overlay {
                 LinearGradient(
-                    colors: [Color.white.opacity(0.12), Color.white.opacity(0.02)],
+                    colors: [Color.white.opacity(isProminent ? 0.10 : 0.07), .clear],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-            )
-            // 3. الحواف الدائرية الناعمة
-            .clipShape(RoundedRectangle(cornerRadius: isProminent ? 32 : 24, style: .continuous))
-            // 4. الحدود المتدرجة (محاكاة حافة الزجاج المصقول)
-            .overlay(
-                RoundedRectangle(cornerRadius: isProminent ? 32 : 24, style: .continuous)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                            colors: [Color.white.opacity(isProminent ? 0.24 : 0.16), Color.white.opacity(0.04)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 1.2
+                        lineWidth: 1
                     )
-            )
-            // 5. الظل الخارجي الناعم للعمق
+            }
             .shadow(
-                color: Color.black.opacity(isProminent ? 0.35 : 0.20),
-                radius: isProminent ? 28 : 16,
+                color: Color.black.opacity(isProminent ? 0.26 : 0.16),
+                radius: reduceMotion ? 0 : (isProminent ? 18 : 10),
                 x: 0,
-                y: isProminent ? 14 : 8
-            )
-            // 6. الظل الداخلي الخفيف (Inner Glow) لتعزيز إحساس الزجاج السميك
-            .shadow(
-                color: Color.white.opacity(0.08),
-                radius: 3,
-                x: 0,
-                y: -2
+                y: reduceMotion ? 0 : (isProminent ? 8 : 4)
             )
     }
 }
@@ -287,4 +279,3 @@ extension View {
         modifier(LiquidGlassModifier(isProminent: prominent))
     }
 }
-
