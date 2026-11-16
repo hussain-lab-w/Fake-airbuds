@@ -264,7 +264,9 @@ struct LiquidGlassModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(
-                isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
+                reduceTransparency
+                    ? AnyShapeStyle(.thickMaterial)
+                    : (isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial)),
                 in: shape
             )
             .overlay {

@@ -55,6 +55,12 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
 
+            if player.currentItem != nil && selectedTab != .player {
+                miniPlayer
+                    .padding(.horizontal, 14)
+                    .padding(.top, 7)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
             appTabDock
         }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
@@ -252,14 +258,6 @@ struct ContentView: View {
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if player.currentItem != nil {
-                    miniPlayer
-                        .padding(.horizontal, 14)
-                        .padding(.top, 8)
-                        .padding(.bottom, 4)
-                }
-            }
             .navigationTitle("Studio")
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -278,14 +276,6 @@ struct ContentView: View {
             .buttonStyle(MusicPressStyle())
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if player.currentItem != nil && selectedTab != .player {
-                    miniPlayer
-                        .padding(.horizontal, 14)
-                        .padding(.top, 8)
-                        .padding(.bottom, 4)
-                }
-            }
     }
 
     private var libraryOverviewSection: some View {
@@ -464,16 +454,14 @@ struct ContentView: View {
             .buttonStyle(MusicPressStyle())
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(Color.black.opacity(0.62), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(EW27Design.primaryText.opacity(0.15), lineWidth: 1))
+        .padding(.vertical, 8)
+        .liquidGlass(prominent: true)
         .overlay(alignment: .bottom) {
             MiniProgressLine(clock: player.clock)
             .padding(.horizontal, 14)
             .padding(.bottom, 6)
         }
-        .shadow(color: .black.opacity(0.32), radius: 14, y: 7)
-        .contentShape(Rectangle())
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .onTapGesture { selectedTab = .player; setLyricsVisible(false) }
     }
 
