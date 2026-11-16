@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var showLyrics = false
     @State private var showPlaybackSettings = false
     @State private var albumArtMotion = false
+    @AppStorage("ew27.appearance") private var appearanceRawValue = EW27Appearance.system.rawValue
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var playerNamespace
 
@@ -58,7 +59,8 @@ struct ContentView: View {
         }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
         .sheet(isPresented: $showQueue) { QueueView(player: player) }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(EW27Appearance(rawValue: appearanceRawValue)?.colorScheme)
+        .tint(EW27Design.accent)
         .sensoryFeedback(.selection, trigger: selectedTab)
         .onAppear { startAlbumArtMotion() }
         .onChange(of: reduceMotion) { _, reduced in
@@ -82,14 +84,14 @@ struct ContentView: View {
                             Text(item.title).font(.caption.weight(.bold)).transition(.opacity.combined(with: .scale(scale: 0.86)))
                         }
                     }
-                    .foregroundStyle(selected ? Color.cyan : Color.white.opacity(0.56))
+                    .foregroundStyle(selected ? EW27Design.accent : EW27Design.secondaryText)
                     .frame(maxWidth: .infinity)
                     .frame(height: 46)
                     .background {
                         if selected {
                             Capsule()
-                                .fill(Color.cyan.opacity(0.13))
-                                .overlay(Capsule().stroke(Color.cyan.opacity(0.28), lineWidth: 1))
+                                .fill(EW27Design.accent.opacity(0.13))
+                                .overlay(Capsule().stroke(EW27Design.accent.opacity(0.28), lineWidth: 1))
                         }
                     }
                     .contentShape(Capsule())
@@ -100,9 +102,7 @@ struct ContentView: View {
             }
         }
         .padding(7)
-        .background(Color.black.opacity(0.68), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
-        .shadow(color: .black.opacity(0.34), radius: 20, y: 8)
+        .liquidGlass(prominent: true)
         .padding(.horizontal, 18)
         .padding(.top, 8)
         .padding(.bottom, 6)
@@ -222,11 +222,11 @@ struct ContentView: View {
                     .opacity(0.72)
             }
             .font(.caption.weight(.semibold))
-            .foregroundStyle(isSelected ? Color.black : Color.white.opacity(0.68))
+            .foregroundStyle(isSelected ? Color.black : EW27Design.primaryText.opacity(0.68))
             .frame(maxWidth: .infinity)
             .frame(height: 38)
-            .background(isSelected ? Color.cyan : Color.white.opacity(0.07), in: Capsule())
-            .overlay(Capsule().stroke(isSelected ? Color.cyan.opacity(0.8) : Color.white.opacity(0.09), lineWidth: 1))
+            .background(isSelected ? Color.cyan : EW27Design.primaryText.opacity(0.07), in: Capsule())
+            .overlay(Capsule().stroke(isSelected ? Color.cyan.opacity(0.8) : EW27Design.primaryText.opacity(0.09), lineWidth: 1))
         }
         .buttonStyle(MusicPressStyle())
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -250,7 +250,6 @@ struct ContentView: View {
             .scrollBounceBehavior(.basedOnSize)
             .buttonStyle(MusicPressStyle())
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -273,11 +272,10 @@ struct ContentView: View {
             .background {
                 ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
             }
-            .listRowBackground(Color.white.opacity(0.028))
+            .listRowBackground(EW27Design.primaryText.opacity(0.028))
             .listRowSeparator(.hidden)
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
             .buttonStyle(MusicPressStyle())
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -301,14 +299,14 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("YOUR COLLECTION").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
                     Text("\(library.allSongs.count) songs · \(library.playlists.count) playlists")
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(EW27Design.primaryText)
                 }
                 Spacer(minLength: 0)
-                Image(systemName: "waveform").font(.system(size: 19, weight: .medium)).foregroundStyle(.white.opacity(0.4))
+                Image(systemName: "waveform").font(.system(size: 19, weight: .medium)).foregroundStyle(EW27Design.primaryText.opacity(0.4))
             }
             .padding(16)
-            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.09), lineWidth: 1))
+            .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -331,10 +329,10 @@ struct ContentView: View {
                         .foregroundStyle(.cyan)
                     Text("Your music stays close and ready.")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(EW27Design.primaryText.opacity(0.9))
                     Text("Search, queue, and play without leaving your library.")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.48))
+                        .foregroundStyle(EW27Design.primaryText.opacity(0.48))
                         .lineLimit(2)
                 }
                 Spacer(minLength: 0)
@@ -358,12 +356,12 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("SOUND STUDIO").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
                         Text(player.selectedPreset.rawValue)
-                            .font(.title3.weight(.bold)).foregroundStyle(.white)
+                            .font(.title3.weight(.bold)).foregroundStyle(EW27Design.primaryText)
                         Text(player.eqEnabled ? "EQ active · \(player.reverbMode) space" : "EQ bypassed · \(player.reverbMode) space")
-                            .font(.caption).foregroundStyle(.white.opacity(0.50)).lineLimit(1)
+                            .font(.caption).foregroundStyle(EW27Design.primaryText.opacity(0.50)).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    Circle().fill(player.eqEnabled ? Color.green : Color.white.opacity(0.30)).frame(width: 8, height: 8)
+                    Circle().fill(player.eqEnabled ? Color.green : EW27Design.primaryText.opacity(0.30)).frame(width: 8, height: 8)
                 }
                 HStack(spacing: 8) {
                     studioFact(icon: "airplay.audio", text: player.routeName)
@@ -372,8 +370,8 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
-            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(.white.opacity(0.09), lineWidth: 1))
+            .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -387,8 +385,8 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+        .background(EW27Design.primaryText.opacity(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(EW27Design.primaryText.opacity(0.08), lineWidth: 1))
     }
 
     private func studioMetric(icon: String, title: String, value: String) -> some View {
@@ -399,10 +397,10 @@ struct ContentView: View {
             Text(title.uppercased())
                 .font(.caption2.weight(.bold))
                 .tracking(0.8)
-                .foregroundStyle(.white.opacity(0.42))
+                .foregroundStyle(EW27Design.primaryText.opacity(0.42))
             Text(value)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.86))
+                .foregroundStyle(EW27Design.primaryText.opacity(0.86))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -412,11 +410,11 @@ struct ContentView: View {
     private func studioFact(icon: String, text: String) -> some View {
         Label(text, systemImage: icon)
             .font(.caption2.weight(.medium))
-            .foregroundStyle(.white.opacity(0.52))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.52))
             .lineLimit(1)
             .padding(.horizontal, 10)
             .frame(height: 28)
-            .background(.white.opacity(0.06), in: Capsule())
+            .background(EW27Design.primaryText.opacity(0.06), in: Capsule())
     }
 
     private var miniPlayer: some View {
@@ -427,7 +425,7 @@ struct ContentView: View {
                 } else {
                     ZStack {
                         LinearGradient(colors: [.cyan.opacity(0.8), .blue.opacity(0.55), .purple.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                        Image(systemName: "waveform").font(.system(size: 18, weight: .semibold)).foregroundStyle(.white)
+                        Image(systemName: "waveform").font(.system(size: 18, weight: .semibold)).foregroundStyle(EW27Design.primaryText)
                     }
                 }
             }
@@ -468,7 +466,7 @@ struct ContentView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .background(Color.black.opacity(0.62), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.15), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(EW27Design.primaryText.opacity(0.15), lineWidth: 1))
         .overlay(alignment: .bottom) {
             MiniProgressLine(clock: player.clock)
             .padding(.horizontal, 14)
@@ -488,7 +486,7 @@ struct ContentView: View {
         } else {
             ZStack {
                 LinearGradient(colors: [Color.cyan.opacity(0.75), Color.blue.opacity(0.38), Color.purple.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                Image(systemName: "waveform").font(.system(size: 38, weight: .medium)).foregroundStyle(.white.opacity(0.92))
+                Image(systemName: "waveform").font(.system(size: 38, weight: .medium)).foregroundStyle(EW27Design.primaryText.opacity(0.92))
             }.clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
@@ -538,7 +536,7 @@ struct ContentView: View {
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                 Text("Choose a local track to start your session.")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.58))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.58))
                     .multilineTextAlignment(.center)
             }
             Button {
@@ -558,7 +556,7 @@ struct ContentView: View {
         .padding(28)
         .frame(maxWidth: 340)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(EW27Design.primaryText.opacity(0.14), lineWidth: 1))
         .shadow(color: .black.opacity(0.28), radius: 24, y: 12)
     }
 
@@ -567,13 +565,13 @@ struct ContentView: View {
             Text("NOW PLAYING")
                 .font(.caption2.weight(.bold))
                 .tracking(1.6)
-                .foregroundStyle(.white.opacity(0.48))
+                .foregroundStyle(EW27Design.primaryText.opacity(0.48))
             Spacer(minLength: 0)
             HStack(spacing: 5) {
                 Image(systemName: "airplay.audio").font(.caption2)
                 Text(player.routeName).font(.caption2.weight(.medium)).lineLimit(1).minimumScaleFactor(0.75)
             }
-            .foregroundStyle(.white.opacity(0.48))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.48))
             Menu {
                 Toggle("Vinyl artwork", isOn: $vinylMode)
                 Toggle("Keep pitch", isOn: Binding(get: { player.keepPitch }, set: { player.keepPitch = $0; player.setSpeed(player.speed) }))
@@ -585,9 +583,9 @@ struct ContentView: View {
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.82))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.82))
                     .frame(width: 42, height: 42)
-                    .background(.white.opacity(0.075), in: Circle())
+                    .background(EW27Design.primaryText.opacity(0.075), in: Circle())
             }
             .accessibilityLabel("Playback options")
         }
@@ -598,7 +596,7 @@ struct ContentView: View {
             .frame(maxWidth: 350)
             .aspectRatio(1, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(.white.opacity(0.16), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(EW27Design.primaryText.opacity(0.16), lineWidth: 1))
             .shadow(color: (Color(uiColor: player.artworkTint ?? .systemBlue)).opacity(0.20), radius: 32, y: 16)
             .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.025 : 1)
             .rotation3DEffect(.degrees(!reduceMotion && player.isPlaying && albumArtMotion ? 1.5 : 0), axis: (x: 0, y: 1, z: 0))
@@ -643,11 +641,11 @@ struct ContentView: View {
     private func signalChip(icon: String, text: String) -> some View {
         Label(text, systemImage: icon)
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(.white.opacity(0.72))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.72))
             .padding(.horizontal, 9)
             .frame(height: 28)
-            .background(.white.opacity(0.07), in: Capsule())
-            .overlay(Capsule().stroke(.white.opacity(0.10), lineWidth: 1))
+            .background(EW27Design.primaryText.opacity(0.07), in: Capsule())
+            .overlay(Capsule().stroke(EW27Design.primaryText.opacity(0.10), lineWidth: 1))
     }
 
     private var artworkActionRail: some View {
@@ -669,10 +667,10 @@ struct ContentView: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(active ? Color.black : Color.white)
+                .foregroundStyle(active ? Color.black : EW27Design.primaryText)
                 .frame(width: 34, height: 34)
                 .background(active ? Color.cyan : Color.black.opacity(0.46), in: Circle())
-                .overlay(Circle().stroke(.white.opacity(active ? 0.4 : 0.2), lineWidth: 1))
+                .overlay(Circle().stroke(EW27Design.primaryText.opacity(active ? 0.4 : 0.2), lineWidth: 1))
         }
         .buttonStyle(MusicPressStyle())
         .accessibilityLabel(label)
@@ -683,16 +681,16 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(player.currentItem?.title ?? "Nothing playing")
                     .font(.system(size: 23, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(EW27Design.primaryText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
                 Text(player.currentItem?.artist ?? "Choose a track in your library")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.60))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.60))
                     .lineLimit(1)
                 Text(player.audioQualityLabel)
                     .font(.caption2.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.40))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.40))
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
@@ -701,7 +699,7 @@ struct ContentView: View {
                 Button { favorites.toggle(item) } label: {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
                         .font(.system(size: 21, weight: .medium))
-                        .foregroundStyle(isFavorite ? Color.pink : Color.white.opacity(0.72))
+                        .foregroundStyle(isFavorite ? Color.pink : EW27Design.primaryText.opacity(0.72))
                         .frame(width: 48, height: 48)
                         .contentShape(Circle())
                 }
@@ -763,10 +761,10 @@ struct ContentView: View {
                     ForEach(speedPresets, id: \.self) { value in
                         Button(String(format: "%g×", value)) { player.setSpeed(value) }
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(abs(player.speed - value) < 0.02 ? Color.black : .white.opacity(0.76))
+                            .foregroundStyle(abs(player.speed - value) < 0.02 ? Color.black : EW27Design.primaryText.opacity(0.76))
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
-                            .background(abs(player.speed - value) < 0.02 ? Color.cyan : Color.white.opacity(0.07), in: Capsule())
+                            .background(abs(player.speed - value) < 0.02 ? Color.cyan : EW27Design.primaryText.opacity(0.07), in: Capsule())
                     }
                 }
                 PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
@@ -776,7 +774,7 @@ struct ContentView: View {
             HStack {
                 Label("Playback settings", systemImage: "slider.horizontal.3")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.78))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.78))
                 Spacer()
                 Text(String(format: "%.2f×", player.speed))
                     .font(.caption.monospacedDigit().weight(.semibold)).foregroundStyle(.cyan)
@@ -786,15 +784,15 @@ struct ContentView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(.white.opacity(0.09), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
     }
 
     private func deckActionButton(_ title: String, icon: String, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 7) {
                 Image(systemName: icon).font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(isActive ? Color.cyan : Color.white.opacity(0.62))
-                Text(title).font(.caption2.weight(.medium)).foregroundStyle(.white.opacity(0.58))
+                    .foregroundStyle(isActive ? Color.cyan : EW27Design.primaryText.opacity(0.62))
+                Text(title).font(.caption2.weight(.medium)).foregroundStyle(EW27Design.primaryText.opacity(0.58))
             }
             .frame(width: 68, height: 52)
             .contentShape(Rectangle())
@@ -832,7 +830,7 @@ struct ContentView: View {
                     .tint(.cyan)
                 }
 
-                Divider().overlay(.white.opacity(0.08))
+                Divider().overlay(EW27Design.primaryText.opacity(0.08))
 
                 EQCurveView(frequencies: [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000], gains: player.eqGains, profileName: player.activeEQProfileName)
                 ForEach(Array(zip(["31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"], 0..<10)), id: \.1) { title, index in
@@ -923,13 +921,13 @@ struct ContentView: View {
                             LinearGradient(colors: [.cyan.opacity(0.52), .indigo.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing)
                             Image(systemName: isCurrent ? "waveform" : "music.note")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.9))
+                                .foregroundStyle(EW27Design.primaryText.opacity(0.9))
                         }
                     }
                 }
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(EW27Design.primaryText.opacity(0.08), lineWidth: 1))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title ?? "Untitled")
                         .font(.subheadline.weight(isCurrent ? .semibold : .medium))
@@ -949,7 +947,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(isCurrent ? Color.cyan.opacity(0.075) : Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(isCurrent ? Color.cyan.opacity(0.075) : EW27Design.primaryText.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(MusicPressStyle())
         .listRowInsets(EdgeInsets(top: 3, leading: 14, bottom: 3, trailing: 14))
@@ -1027,10 +1025,10 @@ private struct SlimPlaybackProgressBar: View {
             let width = max(0, geometry.size.width)
 
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.24)).frame(height: 4)
+                Capsule().fill(EW27Design.primaryText.opacity(0.24)).frame(height: 4)
                 Capsule().fill(.cyan).frame(width: width * CGFloat(progress), height: 4)
                 Circle()
-                    .fill(.white)
+                    .fill(EW27Design.primaryText)
                     .frame(width: 10, height: 10)
                     .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
                     .offset(x: max(0, width * CGFloat(progress) - 5))

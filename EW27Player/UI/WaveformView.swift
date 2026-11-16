@@ -13,7 +13,7 @@ struct WaveformView: View {
                     var line = Path()
                     line.move(to: CGPoint(x: 0, y: size.height / 2))
                     line.addLine(to: CGPoint(x: size.width, y: size.height / 2))
-                    context.stroke(line, with: .color(.white.opacity(0.25)), lineWidth: 1)
+                    context.stroke(line, with: .color(EW27Design.primaryText.opacity(0.25)), lineWidth: 1)
                     return
                 }
                 let count = store.peaks.count
@@ -25,7 +25,7 @@ struct WaveformView: View {
                     let height = max(2, value * size.height)
                     let x = CGFloat(index) * (width + gap)
                     let rect = CGRect(x: x, y: (size.height - height) / 2, width: width, height: height)
-                    context.fill(Path(roundedRect: rect, cornerRadius: width / 2), with: .color(Double(index) / Double(count) < position ? .cyan : .white.opacity(0.25)))
+                    context.fill(Path(roundedRect: rect, cornerRadius: width / 2), with: .color(Double(index) / Double(count) < position ? .cyan : EW27Design.primaryText.opacity(0.25)))
                 }
             }
             .contentShape(Rectangle())

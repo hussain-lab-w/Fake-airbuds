@@ -378,22 +378,22 @@ struct AudioEffectsSection: View {
         Section {
             VStack(alignment: .leading, spacing: 14) {
                 profileStrip
-                Divider().overlay(.white.opacity(0.08))
+                Divider().overlay(EW27Design.primaryText.opacity(0.08))
                 studioDisclosureButton("Character", icon: "waveform.badge.plus", detail: characterDetail, isExpanded: $characterExpanded)
                 if characterExpanded {
                     characterControls.padding(.top, 8)
                 }
-                Divider().overlay(.white.opacity(0.08))
+                Divider().overlay(EW27Design.primaryText.opacity(0.08))
                 studioDisclosureButton("Spatial", icon: "dot.radiowaves.left.and.right", detail: spatialDetail, isExpanded: $spatialExpanded)
                 if spatialExpanded {
                     spatialControls.padding(.top, 8)
                 }
-                Divider().overlay(.white.opacity(0.08))
+                Divider().overlay(EW27Design.primaryText.opacity(0.08))
                 studioDisclosureButton("Playback tools", icon: "waveform.path", detail: playbackDetail, isExpanded: $playbackExpanded)
                 if playbackExpanded {
                     playbackControls.padding(.top, 8)
                 }
-                Divider().overlay(.white.opacity(0.08))
+                Divider().overlay(EW27Design.primaryText.opacity(0.08))
                 studioDisclosureButton("Saved profiles", icon: "square.stack.3d.up", detail: player.customEffectPresets.isEmpty ? "None yet" : "\(player.customEffectPresets.count) saved", isExpanded: $presetsExpanded)
                 if presetsExpanded {
                     savedPresetsControls.padding(.top, 8)
@@ -419,12 +419,12 @@ struct AudioEffectsSection: View {
                         .foregroundStyle(EW27Design.cyan)
                     Text(player.selectedPreset.rawValue)
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(EW27Design.primaryText)
                 }
                 Spacer()
                 Text(player.eqEnabled ? "EQ ON" : "BYPASSED")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(player.eqEnabled ? .green : .white.opacity(0.42))
+                    .foregroundStyle(player.eqEnabled ? .green : EW27Design.primaryText.opacity(0.42))
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 9) {
@@ -442,11 +442,11 @@ struct AudioEffectsSection: View {
                                 Text(profile.title)
                                     .font(.caption.weight(.semibold))
                             }
-                            .foregroundStyle(selected ? Color.black : Color.white.opacity(0.76))
+                            .foregroundStyle(selected ? Color.black : EW27Design.primaryText.opacity(0.76))
                             .padding(.horizontal, 12)
                             .frame(height: 36)
-                            .background(selected ? Color.cyan : Color.white.opacity(0.07), in: Capsule())
-                            .overlay(Capsule().stroke(selected ? Color.cyan.opacity(0.9) : Color.white.opacity(0.08), lineWidth: 1))
+                            .background(selected ? Color.cyan : EW27Design.primaryText.opacity(0.07), in: Capsule())
+                            .overlay(Capsule().stroke(selected ? Color.cyan.opacity(0.9) : EW27Design.primaryText.opacity(0.08), lineWidth: 1))
                         }
                         .buttonStyle(MusicPressStyle())
                         .accessibilityLabel("Audio profile \(profile.title)")
@@ -483,8 +483,8 @@ struct AudioEffectsSection: View {
                 .frame(width: 28, height: 28)
                 .background(EW27Design.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                Text(detail).font(.caption2).foregroundStyle(.white.opacity(0.42))
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(EW27Design.primaryText)
+                Text(detail).font(.caption2).foregroundStyle(EW27Design.primaryText.opacity(0.42))
             }
         }
     }
@@ -500,9 +500,9 @@ struct AudioEffectsSection: View {
                 Spacer(minLength: 8)
                 Image(systemName: isExpanded.wrappedValue ? "chevron.up" : "chevron.down")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.48))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.48))
                     .frame(width: 30, height: 30)
-                    .background(.white.opacity(0.06), in: Circle())
+                    .background(EW27Design.primaryText.opacity(0.06), in: Circle())
             }
             .contentShape(Rectangle())
         }
@@ -541,7 +541,7 @@ struct AudioEffectsSection: View {
             Slider(value: Binding(get: { Double(player.saturationMix) }, set: { player.setSaturationMix(Float($0)) }), in: 0...100)
                 .tint(.cyan)
 
-            Divider().overlay(.white.opacity(0.08))
+            Divider().overlay(EW27Design.primaryText.opacity(0.08))
 
             HStack {
                 Label("Echo", systemImage: "repeat.1")
@@ -709,7 +709,7 @@ struct AudioEffectsSection: View {
             if player.customEffectPresets.isEmpty {
                 Text("Save a combination of EQ, speed and space for quick recall.")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.45))
             }
         }
     }

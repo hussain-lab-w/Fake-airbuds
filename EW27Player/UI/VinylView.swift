@@ -67,7 +67,7 @@ struct VinylView: View {
                     let opacity = index.isMultiple(of: 5) ? 0.16 : 0.055
                     spinning.stroke(
                         Path(ellipseIn: grooveRect),
-                        with: .color(.white.opacity(opacity)),
+                        with: .color(EW27Design.primaryText.opacity(opacity)),
                         lineWidth: index.isMultiple(of: 5) ? 0.8 : 0.45
                     )
                 }
@@ -86,7 +86,7 @@ struct VinylView: View {
                         endAngle: .degrees(scratch.2),
                         clockwise: false
                     )
-                    spinning.stroke(path, with: .color(.white.opacity(0.20)), lineWidth: 0.45)
+                    spinning.stroke(path, with: .color(EW27Design.primaryText.opacity(0.20)), lineWidth: 0.45)
                 }
 
                 let dustRadius = diameter * 0.004
@@ -97,7 +97,7 @@ struct VinylView: View {
                 ]
                 for point in dustPositions {
                     let speck = CGRect(x: point.x, y: point.y, width: dustRadius * 2, height: dustRadius * 2)
-                    spinning.fill(Path(ellipseIn: speck), with: .color(.white.opacity(0.36)))
+                    spinning.fill(Path(ellipseIn: speck), with: .color(EW27Design.primaryText.opacity(0.36)))
                 }
 
                 let labelDiameter = diameter * 0.4
@@ -109,23 +109,23 @@ struct VinylView: View {
                 } else {
                     spinning.fill(Path(ellipseIn: labelRect), with: .color(Color(red: 0.08, green: 0.42, blue: 0.58)))
                 }
-                spinning.stroke(Path(ellipseIn: labelRect), with: .color(.white.opacity(0.74)), lineWidth: max(0.8, diameter * 0.004))
+                spinning.stroke(Path(ellipseIn: labelRect), with: .color(EW27Design.primaryText.opacity(0.74)), lineWidth: max(0.8, diameter * 0.004))
 
                 let notchWidth = diameter * 0.018
                 let notchHeight = diameter * 0.052
                 let notchRect = CGRect(x: -notchWidth / 2, y: -labelDiameter / 2 + notchHeight * 0.12, width: notchWidth, height: notchHeight)
-                spinning.fill(Path(roundedRect: notchRect, cornerSize: CGSize(width: notchWidth / 2, height: notchWidth / 2)), with: .color(.white.opacity(0.96)))
+                spinning.fill(Path(roundedRect: notchRect, cornerSize: CGSize(width: notchWidth / 2, height: notchWidth / 2)), with: .color(EW27Design.primaryText.opacity(0.96)))
 
                 let sheen = Gradient(stops: [
                     .init(color: .clear, location: 0),
-                    .init(color: .white.opacity(0.02), location: 0.035),
-                    .init(color: .white.opacity(0.12), location: 0.10),
-                    .init(color: .white.opacity(0.025), location: 0.17),
+                    .init(color: EW27Design.primaryText.opacity(0.02), location: 0.035),
+                    .init(color: EW27Design.primaryText.opacity(0.12), location: 0.10),
+                    .init(color: EW27Design.primaryText.opacity(0.025), location: 0.17),
                     .init(color: .clear, location: 0.22),
                     .init(color: .clear, location: 0.50),
-                    .init(color: .white.opacity(0.02), location: 0.535),
-                    .init(color: .white.opacity(0.12), location: 0.60),
-                    .init(color: .white.opacity(0.025), location: 0.68),
+                    .init(color: EW27Design.primaryText.opacity(0.02), location: 0.535),
+                    .init(color: EW27Design.primaryText.opacity(0.12), location: 0.60),
+                    .init(color: EW27Design.primaryText.opacity(0.025), location: 0.68),
                     .init(color: .clear, location: 0.73),
                     .init(color: .clear, location: 1)
                 ])
@@ -149,7 +149,7 @@ struct VinylView: View {
 
                 let spindleRadius = max(1.6, diameter * 0.014)
                 let spindle = CGRect(x: center.x - spindleRadius, y: center.y - spindleRadius, width: spindleRadius * 2, height: spindleRadius * 2)
-                context.fill(Path(ellipseIn: spindle), with: .color(.white.opacity(0.9)))
+                context.fill(Path(ellipseIn: spindle), with: .color(EW27Design.primaryText.opacity(0.9)))
                 let spindleCoreRadius = max(0.7, spindleRadius * 0.35)
                 let spindleCore = CGRect(x: center.x - spindleCoreRadius, y: center.y - spindleCoreRadius, width: spindleCoreRadius * 2, height: spindleCoreRadius * 2)
                 context.fill(Path(ellipseIn: spindleCore), with: .color(.black.opacity(0.82)))

@@ -89,7 +89,7 @@ struct QueueView: View {
                             .foregroundStyle(.cyan)
                         Text("\(max(0, model.items.count - model.currentIndex - 1)) tracks up next")
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.58))
+                            .foregroundStyle(EW27Design.primaryText.opacity(0.58))
                     }
                     Spacer()
                     Image(systemName: "text.line.first.and.arrowtriangle.forward")
@@ -104,14 +104,14 @@ struct QueueView: View {
                             Text("NOW PLAYING")
                                 .font(.caption2.weight(.bold))
                                 .tracking(1.2)
-                                .foregroundStyle(.white.opacity(0.45))
+                                .foregroundStyle(EW27Design.primaryText.opacity(0.45))
                             Text(current.title ?? "Untitled")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(EW27Design.primaryText)
                                 .lineLimit(1)
                             Text(current.artist ?? "")
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.52))
+                                .foregroundStyle(EW27Design.primaryText.opacity(0.52))
                                 .lineLimit(1)
                         }
                         Spacer(minLength: 0)
@@ -127,7 +127,7 @@ struct QueueView: View {
                                 Text("Tap to play now · drag to shape what comes next")
                                     .font(.caption2.weight(.medium))
                             }
-                            .foregroundStyle(.white.opacity(0.42))
+                            .foregroundStyle(EW27Design.primaryText.opacity(0.42))
                         }
                     }
                 }
@@ -161,7 +161,7 @@ private struct QueueRow: View {
             HStack(spacing: 12) {
                 Text(String(format: "%02d", index + 1))
                     .font(.caption.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(isCurrent ? .cyan : .white.opacity(0.35))
+                    .foregroundStyle(isCurrent ? .cyan : EW27Design.primaryText.opacity(0.35))
                     .frame(width: 28, alignment: .leading)
 
                 QueueArtworkView(item: item, size: 46)
@@ -169,11 +169,11 @@ private struct QueueRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(item.title ?? "Untitled")
                         .font(.subheadline.weight(isCurrent ? .semibold : .medium))
-                        .foregroundStyle(isCurrent ? .cyan : .white)
+                        .foregroundStyle(isCurrent ? .cyan : EW27Design.primaryText)
                         .lineLimit(1)
                     Text(item.artist ?? "")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.48))
+                        .foregroundStyle(EW27Design.primaryText.opacity(0.48))
                         .lineLimit(1)
                 }
 
@@ -187,10 +187,10 @@ private struct QueueRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 11)
-            .background(isCurrent ? Color.cyan.opacity(0.10) : Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(isCurrent ? Color.cyan.opacity(0.10) : EW27Design.primaryText.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isCurrent ? Color.cyan.opacity(0.28) : Color.white.opacity(0.07), lineWidth: 1)
+                    .stroke(isCurrent ? Color.cyan.opacity(0.28) : EW27Design.primaryText.opacity(0.07), lineWidth: 1)
             }
         }
         .buttonStyle(MusicPressStyle())
@@ -216,13 +216,13 @@ private struct QueueArtworkView: View {
                     LinearGradient(colors: [.cyan.opacity(0.52), .blue.opacity(0.38), .purple.opacity(0.46)], startPoint: .topLeading, endPoint: .bottomTrailing)
                     Image(systemName: "music.note")
                         .font(.system(size: size * 0.34, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(EW27Design.primaryText.opacity(0.9))
                 }
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous).stroke(.white.opacity(0.11), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous).stroke(EW27Design.primaryText.opacity(0.11), lineWidth: 1))
         .task(id: item.persistentID) {
             let target = CGSize(width: size * 2, height: size * 2)
             image = ArtworkCache.shared.image(for: item.persistentID, artwork: item.artwork, size: target)

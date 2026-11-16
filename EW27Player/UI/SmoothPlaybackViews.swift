@@ -7,7 +7,7 @@ struct MiniProgressLine: View {
         GeometryReader { proxy in
             let progress = clock.duration > 0 ? CGFloat(min(1, max(0, clock.elapsed / clock.duration))) : 0
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.10))
+                Capsule().fill(EW27Design.primaryText.opacity(0.10))
                 Capsule()
                     .fill(LinearGradient(colors: [.cyan, .blue], startPoint: .leading, endPoint: .trailing))
                     .frame(width: proxy.size.width * progress)
@@ -76,7 +76,7 @@ struct PlaybackControlsView: View {
                 Text(formatTime(clock.duration))
             }
             .font(.caption2.monospacedDigit().weight(.medium))
-            .foregroundStyle(.white.opacity(0.58))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.58))
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Label("Speed", systemImage: "speedometer").font(.subheadline.weight(.semibold))
@@ -89,8 +89,8 @@ struct PlaybackControlsView: View {
                         Button(String(format: "%g×", value)) { player.setSpeed(value) }
                             .font(.caption.weight(.semibold))
                             .frame(maxWidth: .infinity).padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(abs(speedState.displayed - value) < 0.02 ? Color.cyan.opacity(0.18) : Color.white.opacity(0.055)))
-                            .foregroundStyle(abs(speedState.displayed - value) < 0.02 ? .cyan : .white.opacity(0.8))
+                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(abs(speedState.displayed - value) < 0.02 ? Color.cyan.opacity(0.18) : EW27Design.primaryText.opacity(0.055)))
+                            .foregroundStyle(abs(speedState.displayed - value) < 0.02 ? .cyan : EW27Design.primaryText.opacity(0.8))
                             .buttonStyle(.plain)
                     }
                 }

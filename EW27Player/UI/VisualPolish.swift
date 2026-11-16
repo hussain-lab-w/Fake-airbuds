@@ -7,6 +7,38 @@ enum Motion {
     static let crossfade = Animation.easeInOut(duration: 0.3)
 }
 
+enum EW27Appearance: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Bright"
+        case .dark: return "Dark"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .system: return "circle.lefthalf.filled"
+        case .light: return "sun.max.fill"
+        case .dark: return "moon.fill"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 struct MusicPressStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -24,8 +56,16 @@ enum EW27Design {
     static let cardRadius: CGFloat = 22
     static let rowRadius: CGFloat = 16
     static let sectionGap: CGFloat = 16
-    static let cyan = Color(red: 0.38, green: 0.78, blue: 1)
-    static let pageBackground = Color(red: 0.018, green: 0.023, blue: 0.039)
+
+    // Semantic colors resolve correctly in both Bright and Dark appearances.
+    static let primaryText = Color(uiColor: .label)
+    static let secondaryText = Color(uiColor: .secondaryLabel)
+    static let tertiaryText = Color(uiColor: .tertiaryLabel)
+    static let canvas = Color(uiColor: .systemBackground)
+    static let groupedCanvas = Color(uiColor: .secondarySystemBackground)
+    static let separator = Color(uiColor: .separator)
+    static let cyan = Color(uiColor: .systemCyan)
+    static let accent = Color(uiColor: .systemBlue)
 }
 
 struct EW27CardModifier: ViewModifier {
@@ -35,17 +75,17 @@ struct EW27CardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(
-                prominent ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.white.opacity(0.055)),
+                prominent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
                 in: RoundedRectangle(cornerRadius: EW27Design.cardRadius, style: .continuous)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: EW27Design.cardRadius, style: .continuous)
-                    .stroke(.white.opacity(prominent ? 0.14 : 0.09), lineWidth: 1)
+                    .stroke(EW27Design.primaryText.opacity(prominent ? 0.16 : 0.09), lineWidth: 1)
             }
             .shadow(
-                color: .black.opacity(prominent ? 0.22 : 0.10),
-                radius: reduceMotion ? 0 : (prominent ? 18 : 8),
-                y: reduceMotion ? 0 : (prominent ? 8 : 4)
+                color: .black.opacity(prominent ? 0.18 : 0.08),
+                radius: reduceMotion ? 0 : (prominent ? 14 : 7),
+                y: reduceMotion ? 0 : (prominent ? 6 : 3)
             )
     }
 }
@@ -67,15 +107,11 @@ struct EW27SectionLabel: View {
 
     var body: some View {
         Group {
-            if let systemImage {
-                Label(title, systemImage: systemImage)
-            } else {
-                Text(title)
-            }
+            if let systemImage { Label(title, systemImage: systemImage) } else { Text(title) }
         }
         .font(.caption.weight(.bold))
         .tracking(1.15)
-        .foregroundStyle(EW27Design.cyan)
+        .foregroundStyle(EW27Design.accent)
         .textCase(nil)
         .accessibilityAddTraits(.isHeader)
     }
@@ -87,17 +123,10 @@ struct EW27LoadingState: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            ProgressView()
-                .controlSize(.regular)
-                .tint(EW27Design.cyan)
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.86))
+            ProgressView().controlSize(.regular).tint(EW27Design.accent)
+            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(EW27Design.primaryText)
             if let detail {
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.52))
-                    .multilineTextAlignment(.center)
+                Text(detail).font(.caption).foregroundStyle(EW27Design.secondaryText).multilineTextAlignment(.center)
             }
         }
         .frame(maxWidth: .infinity)
@@ -127,21 +156,19 @@ struct EW27EmptyState: View {
         VStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.system(size: 30, weight: .medium))
-                .foregroundStyle(EW27Design.cyan)
+                .foregroundStyle(EW27Design.accent)
                 .frame(width: 64, height: 64)
-                .background(EW27Design.cyan.opacity(0.12), in: Circle())
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.88))
+                .background(EW27Design.accent.opacity(0.12), in: Circle())
+            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(EW27Design.primaryText)
             Text(detail)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.54))
+                .foregroundStyle(EW27Design.secondaryText)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
                     .buttonStyle(.bordered)
-                    .tint(EW27Design.cyan)
+                    .tint(EW27Design.accent)
                     .buttonStyle(MusicPressStyle())
             }
         }
@@ -157,42 +184,36 @@ struct ArtworkAuroraBackground: View {
     let image: UIImage?
     let tint: UIColor?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @State private var drift = false
 
-    private var accent: Color {
-        tint.map(Color.init(uiColor:)) ?? Color(red: 0.08, green: 0.32, blue: 0.58)
-    }
-
+    private var accent: Color { tint.map(Color.init(uiColor:)) ?? EW27Design.accent }
     private var artworkKey: String { "\(image?.hash ?? 0)-\(tint?.hash ?? 0)" }
+    private var base: Color { colorScheme == .dark ? Color(red: 0.018, green: 0.023, blue: 0.039) : Color(red: 0.93, green: 0.96, blue: 1.0) }
+    private var shade: Color { colorScheme == .dark ? .black : .white }
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                EW27Design.pageBackground
+                base
                 if let image {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
                         .frame(width: proxy.size.width, height: proxy.size.height)
-                        .scaleEffect(drift ? 1.20 : 1.10)
-                        .offset(x: drift ? 18 : -14, y: drift ? -12 : 14)
+                        .scaleEffect(drift ? 1.16 : 1.10)
+                        .offset(x: drift ? 12 : -10, y: drift ? -8 : 10)
                         .blur(radius: 54)
-                        .opacity(0.36)
+                        .opacity(colorScheme == .dark ? 0.32 : 0.22)
                         .transition(.opacity)
                         .id(artworkKey)
                 }
-                Circle()
-                    .fill(accent.opacity(0.34))
-                    .frame(width: 320, height: 320)
-                    .blur(radius: 88)
+                Circle().fill(accent.opacity(colorScheme == .dark ? 0.30 : 0.18)).frame(width: 320, height: 320).blur(radius: 88)
                     .offset(x: drift ? 110 : 62, y: drift ? -150 : -112)
-                Circle()
-                    .fill(accent.opacity(0.17))
-                    .frame(width: 280, height: 280)
-                    .blur(radius: 94)
+                Circle().fill(accent.opacity(colorScheme == .dark ? 0.16 : 0.10)).frame(width: 280, height: 280).blur(radius: 94)
                     .offset(x: drift ? -98 : -58, y: drift ? 190 : 142)
                 LinearGradient(
-                    colors: [accent.opacity(0.20), Color(red: 0.015, green: 0.02, blue: 0.04).opacity(0.58), .black.opacity(0.94)],
+                    colors: [accent.opacity(colorScheme == .dark ? 0.18 : 0.10), base.opacity(0.42), shade.opacity(colorScheme == .dark ? 0.82 : 0.18)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -201,11 +222,9 @@ struct ArtworkAuroraBackground: View {
             .clipped()
         }
         .ignoresSafeArea()
-        .animation(.easeInOut(duration: 1.1), value: artworkKey)
+        .animation(.easeInOut(duration: 0.8), value: artworkKey)
         .onAppear { beginDrift() }
-        .onChange(of: reduceMotion) { _, reduced in
-            if reduced { drift = false } else { beginDrift() }
-        }
+        .onChange(of: reduceMotion) { _, reduced in if reduced { drift = false } else { beginDrift() } }
     }
 
     private func beginDrift() {
@@ -225,52 +244,51 @@ struct GlassPanel<Content: View>: View {
 
     var body: some View {
         content
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(.white.opacity(0.14), lineWidth: 1)
-            }
-            .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(EW27Design.primaryText.opacity(0.13), lineWidth: 1) }
     }
 }
-// MARK: - Liquid Glass Modifier
+
+// Uses Apple's native Liquid Glass on iOS 26+, while retaining a lightweight iOS 17 fallback.
 struct LiquidGlassModifier: ViewModifier {
-    var isProminent: Bool = false
+    var isProminent = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private var cornerRadius: CGFloat { isProminent ? 22 : 18 }
-    
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous) }
+
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content
-            .background(
-                isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.ultraThinMaterial),
-                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            )
-            .overlay {
-                LinearGradient(
-                    colors: [Color.white.opacity(isProminent ? 0.10 : 0.07), .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+        if #available(iOS 26.0, *), !reduceTransparency {
+            if isProminent {
+                content.glassEffect(.regular, in: shape)
+            } else {
+                content.glassEffect(.clear, in: shape)
+            }
+        } else {
+            content
+                .background(
+                    isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
+                    in: shape
                 )
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(isProminent ? 0.24 : 0.16), Color.white.opacity(0.04)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
+                .overlay {
+                    LinearGradient(
+                        colors: [EW27Design.primaryText.opacity(isProminent ? 0.10 : 0.06), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-            }
-            .shadow(
-                color: Color.black.opacity(isProminent ? 0.26 : 0.16),
-                radius: reduceMotion ? 0 : (isProminent ? 18 : 10),
-                x: 0,
-                y: reduceMotion ? 0 : (isProminent ? 8 : 4)
-            )
+                    .clipShape(shape)
+                }
+                .overlay {
+                    shape.stroke(EW27Design.primaryText.opacity(isProminent ? 0.18 : 0.11), lineWidth: 1)
+                }
+                .shadow(
+                    color: .black.opacity(isProminent ? 0.18 : 0.10),
+                    radius: reduceMotion ? 0 : (isProminent ? 12 : 7),
+                    y: reduceMotion ? 0 : (isProminent ? 5 : 3)
+                )
+        }
     }
 }
 

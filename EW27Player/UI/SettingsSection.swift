@@ -6,10 +6,17 @@ struct SettingsSection: View {
     @AppStorage("ew27.vinyl.enabled") private var vinylEnabled = false
     @AppStorage("ew27.spectrum.enabled") private var spectrumEnabled = true
     @AppStorage("ew27.lyrics.onlineLookup") private var onlineLyricsLookup = true
+    @AppStorage("ew27.appearance") private var appearanceRawValue = EW27Appearance.system.rawValue
     @ObservedObject var player: AudioPlayer
 
     var body: some View {
         Section("Settings") {
+            Picker("Appearance", selection: $appearanceRawValue) {
+                ForEach(EW27Appearance.allCases) { appearance in
+                    Label(appearance.title, systemImage: appearance.icon)
+                        .tag(appearance.rawValue)
+                }
+            }
             Toggle("Haptics", isOn: $hapticsEnabled)
             Toggle("Reset speed to 1x on launch", isOn: $resetSpeedOnLaunch)
             Toggle("Online lyrics lookup", isOn: $onlineLyricsLookup)

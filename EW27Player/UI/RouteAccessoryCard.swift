@@ -13,16 +13,16 @@ struct RouteAccessoryCard: View {
                     Image(systemName: "airpodspro")
                         .font(.system(size: 30, weight: .semibold))
                         .symbolEffect(.pulse, options: .repeating)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(EW27Design.primaryText)
                         .padding(12)
                         .background(Circle().fill(LinearGradient(colors: [Color.cyan.opacity(0.9), Color.blue.opacity(0.72)], startPoint: .topLeading, endPoint: .bottomTrailing)))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Connected")
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(EW27Design.primaryText)
                         Text(displayedRoute)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(EW27Design.primaryText.opacity(0.85))
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
@@ -32,7 +32,7 @@ struct RouteAccessoryCard: View {
                     LinearGradient(colors: [Color(red: 0.12, green: 0.2, blue: 0.38).opacity(0.97), Color(red: 0.16, green: 0.12, blue: 0.34).opacity(0.97)], startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 24, style: .continuous)
                 )
-                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(LinearGradient(colors: [.white.opacity(0.32), .cyan.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(LinearGradient(colors: [EW27Design.primaryText.opacity(0.32), .cyan.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
                 .shadow(color: .black.opacity(0.32), radius: 18, y: 9)
                 .padding(.horizontal, 16)
                 .padding(.top, 8)

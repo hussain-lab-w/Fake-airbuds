@@ -84,10 +84,10 @@ struct LyricsView: View {
                 Button(action: onReturnToPlayer) {
                     Label("Player", systemImage: "chevron.down")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.88))
+                        .foregroundStyle(EW27Design.primaryText.opacity(0.88))
                         .padding(.horizontal, 12)
                         .frame(height: 40)
-                        .background(.white.opacity(0.09), in: Capsule())
+                        .background(EW27Design.primaryText.opacity(0.09), in: Capsule())
                 }
                 .buttonStyle(MusicPressStyle())
                 .accessibilityLabel("Return to player")
@@ -96,7 +96,7 @@ struct LyricsView: View {
                 if let image = player.currentArtwork {
                     Image(uiImage: image).resizable().scaledToFill()
                 } else {
-                    Color.white.opacity(0.1)
+                    EW27Design.primaryText.opacity(0.1)
                 }
             }
             .frame(width: 44, height: 44)
@@ -108,7 +108,7 @@ struct LyricsView: View {
                     .lineLimit(1)
                 Text(player.currentItem?.artist ?? "")
                     .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.6))
                     .lineLimit(1)
             }
             Spacer(minLength: 8)
@@ -141,7 +141,7 @@ struct LyricsView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 22))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.85))
                     .frame(width: 44, height: 44)
             }
         }
@@ -165,11 +165,11 @@ struct LyricsView: View {
     private var statusBadge: some View {
         HStack(spacing: 7) {
             Circle()
-                .fill(store.isLoading ? .orange : (trackLyrics == nil ? .white.opacity(0.35) : .cyan))
+                .fill(store.isLoading ? .orange : (trackLyrics == nil ? EW27Design.primaryText.opacity(0.35) : .cyan))
                 .frame(width: 7, height: 7)
             Text(sourceBadge)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.68))
+                .foregroundStyle(EW27Design.primaryText.opacity(0.68))
                 .lineLimit(1)
             Spacer(minLength: 0)
             if isSynced {
@@ -328,7 +328,7 @@ struct LyricsView: View {
                     .foregroundStyle(.cyan)
                     .padding(.horizontal, 13)
                     .padding(.vertical, 7)
-                    .background(.white.opacity(0.055), in: Capsule())
+                    .background(EW27Design.primaryText.opacity(0.055), in: Capsule())
                     .overlay(Capsule().stroke(.cyan.opacity(0.38), lineWidth: 1))
             }
             .buttonStyle(.plain)
@@ -435,7 +435,7 @@ struct LyricsView: View {
                                     Text(rawLine)
                                         .font(.system(size: size, weight: .semibold, design: .rounded))
                                         .lineSpacing(8)
-                                        .foregroundStyle(.white.opacity(0.92))
+                                        .foregroundStyle(EW27Design.primaryText.opacity(0.92))
                                 }
                             }
                         }
@@ -529,7 +529,7 @@ private struct InterludeDots: View {
             ForEach(0..<3, id: \.self) { index in
                 let fill = min(1, max(0, progress * 3 - Double(index)))
                 Circle()
-                    .fill(.white.opacity(0.25 + 0.75 * fill))
+                    .fill(EW27Design.primaryText.opacity(0.25 + 0.75 * fill))
                     .frame(width: 12, height: 12)
                     .scaleEffect(breathingScale * CGFloat(0.9 + 0.1 * fill))
             }
@@ -561,24 +561,24 @@ private struct SyncedLyricWord: View {
     var body: some View {
         ZStack(alignment: .leading) {
             Text(word.text)
-                .foregroundStyle(.white.opacity(isBackgroundVocal ? 0.28 : 0.38))
+                .foregroundStyle(EW27Design.primaryText.opacity(isBackgroundVocal ? 0.28 : 0.38))
             if isActiveLine {
                 Text(word.text)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(EW27Design.primaryText)
                     .mask {
                         GeometryReader { geometry in
                             if progress <= 0 {
                                 Color.clear
                             } else if progress >= 1 {
-                                Color.white
+                                EW27Design.primaryText
                             } else {
                                 let revealWidth = geometry.size.width * progress
                                 let featherWidth = min(16, max(4, geometry.size.width * 0.14))
                                 let solidWidth = max(0, revealWidth - featherWidth)
                                 let fadeWidth = max(0, revealWidth - solidWidth)
                                 HStack(spacing: 0) {
-                                    Rectangle().fill(.white).frame(width: solidWidth)
-                                    LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
+                                    Rectangle().fill(EW27Design.primaryText).frame(width: solidWidth)
+                                    LinearGradient(colors: [EW27Design.primaryText, .clear], startPoint: .leading, endPoint: .trailing)
                                         .frame(width: fadeWidth)
                                     Spacer(minLength: 0)
                                 }
@@ -587,7 +587,7 @@ private struct SyncedLyricWord: View {
                         }
                     }
                     .opacity(isBackgroundVocal ? 0.28 : 1)
-                    .shadow(color: .white.opacity(isCurrent ? 0.35 : 0), radius: 10)
+                    .shadow(color: EW27Design.primaryText.opacity(isCurrent ? 0.35 : 0), radius: 10)
             }
         }
         .font(.system(size: isBackgroundVocal ? fontSize * 0.72 : fontSize, weight: .bold, design: .default))
@@ -618,8 +618,8 @@ private struct LyricsTransportBar: View {
             GeometryReader { geo in
                 let shown = scrubFraction ?? currentFraction
                 ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.18))
-                    Capsule().fill(.white.opacity(0.9)).frame(width: max(4, geo.size.width * shown))
+                    Capsule().fill(EW27Design.primaryText.opacity(0.18))
+                    Capsule().fill(EW27Design.primaryText.opacity(0.9)).frame(width: max(4, geo.size.width * shown))
                 }
                 .frame(height: 5)
                 .frame(maxHeight: .infinity, alignment: .center)
@@ -644,7 +644,7 @@ private struct LyricsTransportBar: View {
                 Text("-" + formatTime(max(0, clock.duration - (scrubFraction.map { $0 * clock.duration } ?? elapsed))))
             }
             .font(.system(size: 11, weight: .medium).monospacedDigit())
-            .foregroundStyle(.white.opacity(0.6))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.6))
 
             HStack(spacing: 40) {
                 Button { player.previousTrack() } label: {
@@ -660,7 +660,7 @@ private struct LyricsTransportBar: View {
                 }
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.white)
+            .foregroundStyle(EW27Design.primaryText)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)

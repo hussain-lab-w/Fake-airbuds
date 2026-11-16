@@ -13,13 +13,13 @@ struct NowPlayingFullView: View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
                 VStack(spacing: 12) {
-                    Capsule().fill(.white.opacity(0.35)).frame(width: 42, height: 5)
+                    Capsule().fill(EW27Design.primaryText.opacity(0.35)).frame(width: 42, height: 5)
                     HStack {
                         Button { dismiss() } label: {
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 14, weight: .bold))
                                 .frame(width: 36, height: 36)
-                                .background(Circle().fill(.white.opacity(0.09)))
+                                .background(Circle().fill(EW27Design.primaryText.opacity(0.09)))
                         }
                         .buttonStyle(MusicPressStyle())
                         .accessibilityLabel("Close player")
@@ -32,7 +32,7 @@ struct NowPlayingFullView: View {
                             Image(systemName: showLyrics ? "photo" : "quote.bubble")
                                 .font(.system(size: 15, weight: .semibold))
                                 .frame(width: 36, height: 36)
-                                .background(Circle().fill(.white.opacity(0.09)))
+                                .background(Circle().fill(EW27Design.primaryText.opacity(0.09)))
                         }
                         .buttonStyle(MusicPressStyle())
                         .accessibilityLabel(showLyrics ? "Show artwork" : "Show lyrics")
@@ -103,7 +103,7 @@ struct NowPlayingFullView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .stroke(.white.opacity(0.22), lineWidth: 1)
+                            .stroke(EW27Design.primaryText.opacity(0.22), lineWidth: 1)
                     }
                     .shadow(color: .black.opacity(0.42), radius: 24, y: 12)
             } else {

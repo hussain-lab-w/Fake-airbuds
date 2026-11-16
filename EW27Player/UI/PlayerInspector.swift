@@ -57,7 +57,7 @@ struct PlayerInspector: View {
                     }
                 }
                 .padding(12)
-                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
             }
         }
     }
@@ -76,10 +76,10 @@ private struct InspectorPill: View {
     var body: some View {
         Label(text, systemImage: icon)
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(.white.opacity(0.78))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.78))
             .lineLimit(1)
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(.white.opacity(0.08), in: Capsule())
+            .background(EW27Design.primaryText.opacity(0.08), in: Capsule())
     }
 }
