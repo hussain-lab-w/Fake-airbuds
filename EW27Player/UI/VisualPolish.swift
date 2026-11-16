@@ -249,7 +249,9 @@ struct GlassPanel<Content: View>: View {
     }
 }
 
-// Uses Apple's native Liquid Glass on iOS 26+, while retaining a lightweight iOS 17 fallback.
+// SDK-compatible Liquid Glass surface. Standard SwiftUI bars and controls pick up
+// Apple's native treatment automatically on newer OS releases; custom surfaces use
+// this adaptive fallback so the app remains deployable to iOS 17.
 struct LiquidGlassModifier: ViewModifier {
     var isProminent = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -260,35 +262,27 @@ struct LiquidGlassModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *), !reduceTransparency {
-            if isProminent {
-                content.glassEffect(.regular, in: shape)
-            } else {
-                content.glassEffect(.clear, in: shape)
+        content
+            .background(
+                isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
+                in: shape
+            )
+            .overlay {
+                LinearGradient(
+                    colors: [EW27Design.primaryText.opacity(isProminent ? 0.10 : 0.06), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .clipShape(shape)
             }
-        } else {
-            content
-                .background(
-                    isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
-                    in: shape
-                )
-                .overlay {
-                    LinearGradient(
-                        colors: [EW27Design.primaryText.opacity(isProminent ? 0.10 : 0.06), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .clipShape(shape)
-                }
-                .overlay {
-                    shape.stroke(EW27Design.primaryText.opacity(isProminent ? 0.18 : 0.11), lineWidth: 1)
-                }
-                .shadow(
-                    color: .black.opacity(isProminent ? 0.18 : 0.10),
-                    radius: reduceMotion ? 0 : (isProminent ? 12 : 7),
-                    y: reduceMotion ? 0 : (isProminent ? 5 : 3)
-                )
-        }
+            .overlay {
+                shape.stroke(EW27Design.primaryText.opacity(isProminent ? 0.18 : 0.11), lineWidth: 1)
+            }
+            .shadow(
+                color: .black.opacity(isProminent ? 0.18 : 0.10),
+                radius: reduceMotion || reduceTransparency ? 0 : (isProminent ? 12 : 7),
+                y: reduceMotion || reduceTransparency ? 0 : (isProminent ? 5 : 3)
+            )
     }
 }
 
