@@ -1048,9 +1048,8 @@ private struct SlimPlaybackProgressBar: View {
                         scrubFraction = nil
                     }
             )
-            .accessibilityElement()
-            .accessibilityLabel("Playback progress")
-            .accessibilityValue(String(format: "%.0f percent", progress * 100))
+       .liquidGlass(prominent: true)
+
         }
     }
 }
