@@ -233,3 +233,58 @@ struct GlassPanel<Content: View>: View {
             .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
     }
 }
+// MARK: - Liquid Glass Modifier
+struct LiquidGlassModifier: ViewModifier {
+    var isProminent: Bool = false
+    
+    func body(content: Content) -> some View {
+        content
+            // 1. الطبقة الزجاجية الأساسية
+            .background(
+                isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.ultraThinMaterial)
+            )
+            // 2. طبقة انعكاس الضوء الخفيفة (Liquid Highlight)
+            .background(
+                LinearGradient(
+                    colors: [Color.white.opacity(0.12), Color.white.opacity(0.02)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            // 3. الحواف الدائرية الناعمة
+            .clipShape(RoundedRectangle(cornerRadius: isProminent ? 32 : 24, style: .continuous))
+            // 4. الحدود المتدرجة (محاكاة حافة الزجاج المصقول)
+            .overlay(
+                RoundedRectangle(cornerRadius: isProminent ? 32 : 24, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
+            )
+            // 5. الظل الخارجي الناعم للعمق
+            .shadow(
+                color: Color.black.opacity(isProminent ? 0.35 : 0.20),
+                radius: isProminent ? 28 : 16,
+                x: 0,
+                y: isProminent ? 14 : 8
+            )
+            // 6. الظل الداخلي الخفيف (Inner Glow) لتعزيز إحساس الزجاج السميك
+            .shadow(
+                color: Color.white.opacity(0.08),
+                radius: 3,
+                x: 0,
+                y: -2
+            )
+    }
+}
+
+extension View {
+    func liquidGlass(prominent: Bool = false) -> some View {
+        modifier(LiquidGlassModifier(isProminent: prominent))
+    }
+}
+
