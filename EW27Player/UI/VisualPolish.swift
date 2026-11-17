@@ -71,7 +71,7 @@ enum EW27Design {
 struct EW27CardModifier: ViewModifier {
     let prominent: Bool
 
-    var body: some View {
+    func body(content: Content) -> some View {
         content.liquidGlass(prominent: prominent)
     }
 }
