@@ -126,6 +126,7 @@ final class AudioPlayer: ObservableObject {
     private var isSeeking = false
     private var isHandlingConfiguration = false
     private var lastProgressDate = Date()
+    private var lastPersistDate = Date()
     private var rampStart: Float = 1
     private var rampTarget: Float = 1
     private var rampStartDate = Date()
@@ -150,6 +151,9 @@ final class AudioPlayer: ObservableObject {
         configureRemoteCommands()
         installObservers()
         updateRouteAndLoadSettings()
+        // Honour the persisted "Spectrum analyzer" toggle at launch; the
+        // setting was only applied while the Settings form was on screen.
+        setSpectrumEnabled(UserDefaults.standard.object(forKey: "ew27.spectrum.enabled") as? Bool ?? true)
     }
 
     deinit {
@@ -302,7 +306,9 @@ final class AudioPlayer: ObservableObject {
     func jumpToQueue(index: Int) {
         guard queue.indices.contains(index) else { return }
         currentIndex = index
+        lastPersistDate = Date()
         startCurrentTrack(at: 0, shouldPlay: true)
+        persistSession()
     }
 
     func previousTrack() {
@@ -377,7 +383,11 @@ final class AudioPlayer: ObservableObject {
     func setNormalizeLoudness(_ enabled: Bool) {
         normalizeLoudness = enabled
         guard enabled, let item = currentItem, let url = item.assetURL else { applyLoudnessGain(0); return }
-        LoudnessNormalizer.gain(for: url, persistentID: item.persistentID) { [weak self] gain in self?.applyLoudnessGain(gain) }
+        let id = item.persistentID
+        LoudnessNormalizer.gain(for: url, persistentID: id) { [weak self] gain in
+            guard let self, self.currentItem?.persistentID == id else { return }
+            self.applyLoudnessGain(gain)
+        }
     }
 
     private func applyLoudnessGain(_ gain: Float) {
@@ -458,7 +468,11 @@ final class AudioPlayer: ObservableObject {
             artworkTint = ArtworkCache.shared.averageColor(for: currentArtwork)
             waveformStore.load(url: url, persistentID: item.persistentID)
             if normalizeLoudness {
-                LoudnessNormalizer.gain(for: url, persistentID: item.persistentID) { [weak self] gain in self?.applyLoudnessGain(gain) }
+                let id = item.persistentID
+                LoudnessNormalizer.gain(for: url, persistentID: id) { [weak self] gain in
+                    guard let self, self.currentItem?.persistentID == id else { return }
+                    self.applyLoudnessGain(gain)
+                }
             }
             duration = TimeInterval(file.length) / file.processingFormat.sampleRate
             audioQualityLabel = Self.qualityLabel(for: file.processingFormat)
@@ -561,6 +575,13 @@ final class AudioPlayer: ObservableObject {
         elapsed = min(duration, elapsed + now.timeIntervalSince(lastProgressDate) * Double(speed))
         lastProgressDate = now
         if elapsed >= duration { elapsed = duration }
+        // Persist the real playback position while playing, so a relaunch
+        // restores where the listener actually stopped instead of the last
+        // play/pause anchor.
+        if now.timeIntervalSince(lastPersistDate) >= 5 {
+            lastPersistDate = now
+            persistSession()
+        }
         let fadeDuration = min(crossfadeSeconds, duration / 2)
         guard engine.isRunning, fxMixer.engine != nil else { return }
         if fadeDuration > 0 {

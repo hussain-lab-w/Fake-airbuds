@@ -57,6 +57,9 @@ final class WaveformStore: ObservableObject {
             guard let channels = buffer.floatChannelData else { break }
             let channelCount = Int(buffer.format.channelCount)
             let frames = Int(buffer.frameLength)
+            // A short/early read can return zero frames; without this guard the
+            // loop never advances `remaining` and spins forever.
+            guard frames > 0 else { break }
             var mono = Array(repeating: Float.zero, count: frames)
             for channel in 0..<channelCount {
                 let samples = Array(UnsafeBufferPointer(start: channels[channel], count: frames))
