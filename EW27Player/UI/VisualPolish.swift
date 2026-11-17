@@ -95,7 +95,7 @@ struct EW27SectionLabel: View {
         Group {
             if let systemImage { Label(title, systemImage: systemImage) } else { Text(title) }
         }
-        .font(.caption.weight(.bold))
+        .font(EW27Type.label)
         .tracking(1.15)
         .foregroundStyle(EW27Design.accent)
         .textCase(nil)
@@ -245,6 +245,18 @@ struct GlassPanel<Content: View>: View {
 // Apple Liquid Glass layer (it refracts whatever sits behind it); on iOS 17-25
 // the same call sites fall back to a layered material so the layout, spacing
 // and hierarchy stay identical across systems.
+
+/// One typographic scale, so every screen speaks with the same voice.
+enum EW27Type {
+    static let hero = Font.system(size: 23, weight: .bold, design: .rounded)
+    static let title = Font.headline
+    static let row = Font.caption.weight(.semibold)
+    static let body = Font.subheadline
+    static let caption = Font.caption2
+    static let chip = Font.caption2.weight(.semibold)
+    static let numeric = Font.caption.monospacedDigit().weight(.semibold)
+    static let label = Font.caption.weight(.bold)
+}
 
 enum EW27Radius {
     static let panel: CGFloat = 26

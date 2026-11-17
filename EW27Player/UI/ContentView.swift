@@ -64,7 +64,12 @@ struct ContentView: View {
             appTabDock
         }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
-        .sheet(isPresented: $showQueue) { QueueView(player: player) }
+        .sheet(isPresented: $showQueue) {
+            QueueView(player: player)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(EW27Radius.panel)
+        }
         .preferredColorScheme(EW27Appearance(rawValue: appearanceRawValue)?.colorScheme)
         .tint(EW27Design.accent)
         .sensoryFeedback(.selection, trigger: selectedTab)
@@ -254,8 +259,6 @@ struct ContentView: View {
             .scrollBounceBehavior(.basedOnSize)
             .buttonStyle(MusicPressStyle())
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .navigationTitle("Studio")
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -272,8 +275,6 @@ struct ContentView: View {
             .listRowSeparator(.hidden)
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
             .buttonStyle(MusicPressStyle())
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
     }
 
     private var libraryOverviewSection: some View {
@@ -441,13 +442,13 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(player.currentItem?.title ?? "No track selected")
-                    .font(.caption.weight(.semibold))
+                    .font(EW27Type.row)
                     .lineLimit(1)
                 // Shows the line being sung right now when lyrics are synced;
                 // falls back to the artist otherwise.
                 TimelineView(.periodic(from: .now, by: 0.4)) { timeline in
                     Text(miniSubtitle(at: timeline.date))
-                        .font(.caption2)
+                        .font(EW27Type.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .contentTransition(.opacity)
@@ -634,20 +635,22 @@ struct ContentView: View {
     }
 
     private var playerSignalChips: some View {
-        HStack(spacing: 7) {
-            signalChip(icon: "waveform", text: player.selectedPreset.rawValue)
-            signalChip(icon: "speedometer", text: String(format: "%.2fx", player.speed))
-            if player.lyricsStore.lyrics != nil {
-                signalChip(icon: "quote.bubble.fill", text: "Lyrics")
+        GlassGroup(spacing: 8) {
+            HStack(spacing: 7) {
+                signalChip(icon: "waveform", text: player.selectedPreset.rawValue)
+                signalChip(icon: "speedometer", text: String(format: "%.2fx", player.speed))
+                if player.lyricsStore.lyrics != nil {
+                    signalChip(icon: "quote.bubble.fill", text: "Lyrics")
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
         .padding(.top, 1)
     }
 
     private func signalChip(icon: String, text: String) -> some View {
         Label(text, systemImage: icon)
-            .font(.caption2.weight(.semibold))
+            .font(EW27Type.chip)
             .foregroundStyle(EW27Design.primaryText.opacity(0.72))
             .padding(.horizontal, 9)
             .frame(height: 28)
@@ -685,16 +688,16 @@ struct ContentView: View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(player.currentItem?.title ?? "Nothing playing")
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
+                    .font(EW27Type.hero)
                     .foregroundStyle(EW27Design.primaryText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
                 Text(player.currentItem?.artist ?? "Choose a track in your library")
-                    .font(.subheadline)
+                    .font(EW27Type.body)
                     .foregroundStyle(EW27Design.primaryText.opacity(0.60))
                     .lineLimit(1)
                 Text(player.audioQualityLabel)
-                    .font(.caption2.weight(.medium))
+                    .font(EW27Type.caption.weight(.medium))
                     .foregroundStyle(EW27Design.primaryText.opacity(0.40))
                     .lineLimit(1)
             }
