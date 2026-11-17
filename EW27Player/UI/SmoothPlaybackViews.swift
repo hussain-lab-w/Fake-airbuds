@@ -31,9 +31,10 @@ struct PlaybackTimeLabels: View {
                     .minimumScaleFactor(0.8)
             }
             Spacer(minLength: 4)
-            Text(formatTime(clock.duration))
+            // Apple Music counts down to the end rather than up to it.
+            Text("-" + formatTime(max(0, clock.duration - clock.elapsed)))
         }
-        .font(.caption2.monospacedDigit().weight(.medium))
+        .font(EW27Type.numeric)
         .foregroundStyle(.secondary)
     }
 

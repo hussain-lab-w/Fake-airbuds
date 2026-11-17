@@ -427,6 +427,17 @@ extension View {
     }
 }
 
+/// Press feedback for plain glyph buttons: dims and shrinks in place without
+/// moving the hit area.
+struct EW27TransportPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.55 : 1)
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: configuration.isPressed)
+    }
+}
+
 /// Swaps a symbol with a spring morph instead of a hard cut.
 struct EW27SymbolReplace: ViewModifier {
     @ViewBuilder

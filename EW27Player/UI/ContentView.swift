@@ -531,6 +531,8 @@ struct ContentView: View {
                         deckProgress
                         deckTransport
                             .padding(.top, 2)
+                        deckActionRow
+                            .padding(.top, 4)
                         if let message = player.playbackMessage {
                             Label(message, systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption)
@@ -593,10 +595,6 @@ struct ContentView: View {
         }
         .frame(width: size.width, height: size.height)
         .clipped()
-        .overlay(alignment: .topTrailing) {
-            artworkActionRail
-                .padding(.top, 56)
-        }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
             guard let item = player.currentItem else { return }
@@ -706,32 +704,6 @@ struct ContentView: View {
             .glassChip()
     }
 
-    private var artworkActionRail: some View {
-        VStack(spacing: 8) {
-            artworkIconButton("quote.bubble.fill", label: "Lyrics", active: showLyrics) {
-                setLyricsVisible(true)
-            }
-            artworkIconButton("list.bullet", label: "Queue", active: false) {
-                showQueue = true
-            }
-            artworkIconButton("shuffle", label: "Shuffle", active: player.shuffleEnabled) {
-                player.shuffleEnabled.toggle()
-            }
-        }
-        .padding(12)
-    }
-
-    private func artworkIconButton(_ icon: String, label: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(active ? Color.black : EW27Design.primaryText)
-                .frame(width: 34, height: 34)
-                .glassCircle(isActive: active)
-        }
-        .buttonStyle(MusicPressStyle())
-        .accessibilityLabel(label)
-    }
 
     private var deckIdentity: some View {
         HStack(alignment: .center, spacing: 16) {
@@ -754,20 +726,17 @@ struct ContentView: View {
             if let item = player.currentItem {
                 let isFavorite = favorites.contains(item)
                 Button { favorites.toggle(item) } label: {
-                    Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 21, weight: .medium))
-                        .foregroundStyle(isFavorite ? Color.pink : EW27Design.primaryText.opacity(0.72))
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(isFavorite ? Color.yellow : EW27Design.primaryText.opacity(0.72))
                         .frame(width: 48, height: 48)
-                        .contentShape(Circle())
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(MusicPressStyle())
+                .buttonStyle(EW27TransportPressStyle())
                 .accessibilityLabel(isFavorite ? "Remove Favorite" : "Add to Favorites")
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .liquidGlass(prominent: false)
-
+        .padding(.horizontal, 2)
     }
 
     private var deckProgress: some View {
@@ -779,22 +748,70 @@ struct ContentView: View {
         .padding(.horizontal, 2)
     }
 
-    private var deckTransport: some View {
-        HStack(spacing: 30) {
-            playerActionButton("backward.fill", label: "Previous track", size: 19) { player.previousTrack() }
-            Button { haptic(); player.togglePlayPause() } label: {
-                EW27PlayPauseIcon(isPlaying: player.isPlaying, size: 26)
-                    .foregroundStyle(Color(red: 0.03, green: 0.07, blue: 0.11))
-                    .frame(width: 72, height: 72)
-                    .background(Circle().fill(EW27Design.cyan.gradient))
-                    .overlay(Circle().stroke(.white.opacity(0.22), lineWidth: 1))
-                    .shadow(color: EW27Design.cyan.opacity(0.30), radius: 18, y: 7)
+    /// Bottom action row, mirroring Apple Music's lyrics / queue / shuffle strip.
+    private var deckActionRow: some View {
+        HStack(spacing: 0) {
+            actionButton("quote.bubble", label: "Lyrics", active: showLyrics) {
+                setLyricsVisible(true)
             }
-            .buttonStyle(MusicPressStyle())
+            .disabled(player.currentItem == nil)
+            Spacer(minLength: 0)
+            actionButton("list.bullet", label: "Queue", active: false) {
+                showQueue = true
+            }
+            Spacer(minLength: 0)
+            actionButton("shuffle", label: "Shuffle", active: player.shuffleEnabled) {
+                player.shuffleEnabled.toggle()
+            }
+        }
+        .padding(.horizontal, 30)
+    }
+
+    private func actionButton(_ symbol: String, label: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 19, weight: .medium))
+                .foregroundStyle(active ? EW27Design.cyan : EW27Design.primaryText.opacity(0.78))
+                .frame(width: 48, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(EW27TransportPressStyle())
+        .accessibilityLabel(label)
+    }
+
+    private var deckTransport: some View {
+        HStack(spacing: 44) {
+            transportButton("backward.fill", label: "Previous track", size: 30) {
+                haptic()
+                player.previousTrack()
+            }
+            Button { haptic(); player.togglePlayPause() } label: {
+                EW27PlayPauseIcon(isPlaying: player.isPlaying, size: 42)
+                    .foregroundStyle(EW27Design.primaryText)
+                    .frame(width: 64, height: 64)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(EW27TransportPressStyle())
             .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
-            playerActionButton("forward.fill", label: "Next track", size: 19) { haptic(); player.nextTrack() }
+            transportButton("forward.fill", label: "Next track", size: 30) {
+                haptic()
+                player.nextTrack()
+            }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Plain glyph button with a generous, predictable hit area.
+    private func transportButton(_ symbol: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(EW27Design.primaryText)
+                .frame(width: 56, height: 56)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(EW27TransportPressStyle())
+        .accessibilityLabel(label)
     }
 
     private var deckShortcuts: some View {
