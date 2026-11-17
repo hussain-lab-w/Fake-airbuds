@@ -407,6 +407,13 @@ struct ContentView: View {
             .background(EW27Design.primaryText.opacity(0.06), in: Capsule())
     }
 
+    /// A restrained tint borrowed from the current artwork, so glass surfaces
+    /// pick up the album's colour the way Apple Music's do.
+    private var artworkGlassTint: Color? {
+        guard let tint = player.artworkTint else { return nil }
+        return Color(uiColor: tint).opacity(0.28)
+    }
+
     private var miniPlayer: some View {
         HStack(spacing: 12) {
             Group {
@@ -455,7 +462,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .liquidGlass(prominent: true)
+        .liquidGlass(prominent: true, tint: artworkGlassTint, interactive: true)
         .overlay(alignment: .bottom) {
             MiniProgressLine(clock: player.clock)
             .padding(.horizontal, 14)
@@ -543,9 +550,7 @@ struct ContentView: View {
         }
         .padding(28)
         .frame(maxWidth: 340)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(EW27Design.primaryText.opacity(0.14), lineWidth: 1))
-        .shadow(color: .black.opacity(0.28), radius: 24, y: 12)
+        .liquidGlass(prominent: true)
     }
 
     private var deckHeader: some View {
@@ -771,8 +776,7 @@ struct ContentView: View {
         .tint(.cyan)
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+        .liquidGlass()
     }
 
     private func deckActionButton(_ title: String, icon: String, isActive: Bool, action: @escaping () -> Void) -> some View {

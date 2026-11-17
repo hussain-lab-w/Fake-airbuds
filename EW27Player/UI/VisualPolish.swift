@@ -72,21 +72,29 @@ struct EW27CardModifier: ViewModifier {
     let prominent: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content
-            .background(
-                prominent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
+        if #available(iOS 26.0, *) {
+            content.glassEffect(
+                prominent ? .regular : .clear,
                 in: RoundedRectangle(cornerRadius: EW27Design.cardRadius, style: .continuous)
             )
-            .overlay {
-                RoundedRectangle(cornerRadius: EW27Design.cardRadius, style: .continuous)
-                    .stroke(EW27Design.primaryText.opacity(prominent ? 0.16 : 0.09), lineWidth: 1)
-            }
-            .shadow(
-                color: .black.opacity(prominent ? 0.18 : 0.08),
-                radius: reduceMotion ? 0 : (prominent ? 14 : 7),
-                y: reduceMotion ? 0 : (prominent ? 6 : 3)
-            )
+        } else {
+            content
+                .background(
+                    prominent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
+                    in: RoundedRectangle(cornerRadius: EW27Design.cardRadius, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: EW27Design.cardRadius, style: .continuous)
+                        .stroke(EW27Design.primaryText.opacity(prominent ? 0.16 : 0.09), lineWidth: 1)
+                }
+                .shadow(
+                    color: .black.opacity(prominent ? 0.18 : 0.08),
+                    radius: reduceMotion ? 0 : (prominent ? 14 : 7),
+                    y: reduceMotion ? 0 : (prominent ? 6 : 3)
+                )
+        }
     }
 }
 
@@ -243,9 +251,7 @@ struct GlassPanel<Content: View>: View {
     }
 
     var body: some View {
-        content
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(EW27Design.primaryText.opacity(0.13), lineWidth: 1) }
+        content.liquidGlass(prominent: true)
     }
 }
 

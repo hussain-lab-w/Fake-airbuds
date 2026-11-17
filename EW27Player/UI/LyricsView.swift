@@ -664,8 +664,7 @@ private struct LyricsTransportBar: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
+        .liquidGlass(prominent: true, interactive: true)
         }
     }
 
