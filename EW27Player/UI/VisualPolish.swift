@@ -312,9 +312,9 @@ struct GlassSurfaceModifier<S: Shape>: ViewModifier {
         shape.stroke(
             LinearGradient(
                 colors: [
-                    .white.opacity(colorScheme == .dark ? 0.34 : 0.52),
-                    .white.opacity(colorScheme == .dark ? 0.06 : 0.14),
-                    .white.opacity(colorScheme == .dark ? 0.10 : 0.24)
+                    .white.opacity(isProminent ? (colorScheme == .dark ? 0.34 : 0.52) : (colorScheme == .dark ? 0.22 : 0.36)),
+                    .white.opacity(isProminent ? (colorScheme == .dark ? 0.06 : 0.14) : 0.04),
+                    .white.opacity(isProminent ? (colorScheme == .dark ? 0.10 : 0.24) : (colorScheme == .dark ? 0.06 : 0.12))
                 ],
                 startPoint: .top,
                 endPoint: .bottom

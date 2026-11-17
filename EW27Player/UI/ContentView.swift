@@ -57,7 +57,7 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
 
-            if player.currentItem != nil && selectedTab != .player {
+            if player.currentItem != nil && selectedTab != .player && dockVisible {
                 miniPlayer
                     .padding(.horizontal, 14)
                     .padding(.top, 7)
@@ -203,7 +203,11 @@ struct ContentView: View {
             }
             .navigationTitle("Library")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Title, artist, or album")
+            .searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Title, artist, or album"
+            )
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Menu {
@@ -589,7 +593,10 @@ struct ContentView: View {
         }
         .frame(width: size.width, height: size.height)
         .clipped()
-        .overlay(alignment: .topTrailing) { artworkActionRail }
+        .overlay(alignment: .topTrailing) {
+            artworkActionRail
+                .padding(.top, 56)
+        }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
             guard let item = player.currentItem else { return }
@@ -650,13 +657,13 @@ struct ContentView: View {
             Text("NOW PLAYING")
                 .font(.caption2.weight(.bold))
                 .tracking(1.6)
-                .foregroundStyle(EW27Design.primaryText.opacity(0.48))
+                .foregroundStyle(EW27Design.primaryText.opacity(0.64))
             Spacer(minLength: 0)
             HStack(spacing: 5) {
                 Image(systemName: "airplay.audio").font(.caption2)
                 Text(player.routeName).font(.caption2.weight(.medium)).lineLimit(1).minimumScaleFactor(0.75)
             }
-            .foregroundStyle(EW27Design.primaryText.opacity(0.48))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.64))
             Menu {
                 Toggle("Vinyl artwork", isOn: $vinylMode)
                 Toggle("Keep pitch", isOn: Binding(get: { player.keepPitch }, set: { player.keepPitch = $0; player.setSpeed(player.speed) }))
@@ -689,7 +696,10 @@ struct ContentView: View {
             .transition(.opacity.combined(with: .scale(scale: 0.96)))
             .animation(reduceMotion ? nil : Motion.sheet, value: player.currentItem?.persistentID)
             .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(alignment: .topTrailing) { artworkActionRail }
+            .overlay(alignment: .topTrailing) {
+            artworkActionRail
+                .padding(.top, 56)
+        }
             .matchedGeometryEffect(id: "player-artwork", in: playerNamespace)
             .simultaneousGesture(
                 DragGesture(minimumDistance: 28)
