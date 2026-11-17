@@ -175,14 +175,14 @@ struct ContentView: View {
     }
 
     private var lyricsAnimation: Animation {
-        reduceMotion ? .linear(duration: 0.01) : Motion.sheet
+        reduceMotion ? .linear(duration: 0.01) : .spring(response: 0.46, dampingFraction: 0.9)
     }
 
     private func lyricsTransition(edge: Edge) -> AnyTransition {
         guard !reduceMotion else { return .opacity }
         return .asymmetric(
-            insertion: .opacity.combined(with: .scale(scale: 0.985)).combined(with: .move(edge: edge)),
-            removal: .opacity.combined(with: .scale(scale: 1.015)).combined(with: .move(edge: edge))
+            insertion: .opacity.combined(with: .scale(scale: 0.975)),
+            removal: .opacity.combined(with: .scale(scale: 1.02))
         )
     }
 
@@ -514,20 +514,6 @@ struct ContentView: View {
         .onTapGesture { selectedTab = .player; setLyricsVisible(false) }
     }
 
-    @ViewBuilder
-    private var playerArtwork: some View {
-        if vinylMode {
-            VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
-        } else if let artwork = player.currentArtwork {
-            Image(uiImage: artwork).resizable().scaledToFill().clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        } else {
-            ZStack {
-                LinearGradient(colors: [Color.cyan.opacity(0.75), Color.blue.opacity(0.38), Color.purple.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                Image(systemName: "waveform").font(.system(size: 38, weight: .medium)).foregroundStyle(EW27Design.primaryText.opacity(0.92))
-            }.clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-    }
-
     private var playerSection: some View {
         GeometryReader { proxy in
             if player.currentItem == nil {
@@ -537,13 +523,14 @@ struct ContentView: View {
                 ZStack {
                     fullBleedArtwork(size: proxy.size)
 
-                    VStack(spacing: 12) {
+                    VStack(spacing: 14) {
                         deckHeader
                         Spacer(minLength: 0)
                         deckIdentity
                         playerSignalChips
                         deckProgress
                         deckTransport
+                            .padding(.top, 2)
                         if let message = player.playbackMessage {
                             Label(message, systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption)
@@ -552,7 +539,7 @@ struct ContentView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 6)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 18)
                     .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
                     // The deck sits on artwork, so it always resolves against a
                     // dark backdrop regardless of the app appearance.
@@ -574,11 +561,24 @@ struct ContentView: View {
                     .id(player.currentItem?.persistentID)
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
             } else if let artwork = player.currentArtwork {
+                // The cover keeps its true aspect ratio — it is never stretched.
+                // The blurred copy behind it fills the rest of the player.
                 Image(uiImage: artwork)
                     .resizable()
                     .scaledToFill()
                     .frame(width: size.width, height: size.height)
+                    .blur(radius: 52)
+                    .scaleEffect(1.18)
+                    .opacity(0.85)
                     .clipped()
+                Image(uiImage: artwork)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size.width, height: size.height)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: .black.opacity(0.35), radius: 26, y: 12)
+                    .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.012 : 1)
+                    .padding(.horizontal, 4)
                     .id(player.currentItem?.persistentID)
                     .transition(.opacity)
                     .animation(reduceMotion ? nil : Motion.crossfade, value: player.currentItem?.persistentID)
@@ -683,44 +683,6 @@ struct ContentView: View {
         }
     }
 
-    private var deckArtwork: some View {
-        playerArtwork
-            .frame(maxWidth: 350)
-            .aspectRatio(1, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(EW27Design.primaryText.opacity(0.16), lineWidth: 1))
-            .shadow(color: (Color(uiColor: player.artworkTint ?? .systemBlue)).opacity(0.20), radius: 32, y: 16)
-            .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.025 : 1)
-            .rotation3DEffect(.degrees(!reduceMotion && player.isPlaying && albumArtMotion ? 1.5 : 0), axis: (x: 0, y: 1, z: 0))
-            .id(player.currentItem?.persistentID)
-            .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            .animation(reduceMotion ? nil : Motion.sheet, value: player.currentItem?.persistentID)
-            .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(alignment: .topTrailing) {
-            artworkActionRail
-                .padding(.top, 56)
-        }
-            .matchedGeometryEffect(id: "player-artwork", in: playerNamespace)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 28)
-                    .onEnded { value in
-                        guard abs(value.translation.width) > 62,
-                              abs(value.translation.width) > abs(value.translation.height) else { return }
-                        haptic()
-                        if value.translation.width < 0 { player.nextTrack() } else { player.previousTrack() }
-                    }
-            )
-            .simultaneousGesture(
-                TapGesture(count: 2)
-                    .onEnded {
-                        guard let item = player.currentItem else { return }
-                        haptic()
-                        favorites.toggle(item)
-                    }
-            )
-            .accessibilityHint("Swipe left or right to change tracks. Double tap to favorite.")
-    }
-
     private var playerSignalChips: some View {
         GlassGroup(spacing: 8) {
             HStack(spacing: 7) {
@@ -818,8 +780,8 @@ struct ContentView: View {
     }
 
     private var deckTransport: some View {
-        HStack(spacing: 32) {
-            playerActionButton("backward.end.fill", label: "Previous track", size: 21) { player.previousTrack() }
+        HStack(spacing: 30) {
+            playerActionButton("backward.fill", label: "Previous track", size: 19) { player.previousTrack() }
             Button { haptic(); player.togglePlayPause() } label: {
                 EW27PlayPauseIcon(isPlaying: player.isPlaying, size: 26)
                     .foregroundStyle(Color(red: 0.03, green: 0.07, blue: 0.11))
@@ -830,7 +792,7 @@ struct ContentView: View {
             }
             .buttonStyle(MusicPressStyle())
             .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
-            playerActionButton("forward.end.fill", label: "Next track", size: 21) { haptic(); player.nextTrack() }
+            playerActionButton("forward.fill", label: "Next track", size: 19) { haptic(); player.nextTrack() }
         }
         .frame(maxWidth: .infinity)
     }
@@ -895,10 +857,10 @@ struct ContentView: View {
 
     private func playerActionButton(_ symbol: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-                Image(systemName: symbol)
-                    .font(.system(size: size, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 48)
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(EW27Design.primaryText)
+                .frame(width: 54, height: 54)
                 .glassCircle()
         }
         .buttonStyle(MusicPressStyle())
@@ -1117,14 +1079,26 @@ private struct SlimPlaybackProgressBar: View {
             let progress = min(1, max(0, scrubFraction ?? current))
             let width = max(0, geometry.size.width)
 
+            let knob: CGFloat = scrubFraction == nil ? 11 : 15
             ZStack(alignment: .leading) {
-                Capsule().fill(EW27Design.primaryText.opacity(0.24)).frame(height: 4)
-                Capsule().fill(.cyan).frame(width: width * CGFloat(progress), height: 4)
+                Capsule(style: .continuous)
+                    .fill(.white.opacity(0.20))
+                    .frame(height: 5)
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [EW27Design.cyan, .white.opacity(0.92)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: width * CGFloat(progress), height: 5)
                 Circle()
-                    .fill(EW27Design.primaryText)
-                    .frame(width: 10, height: 10)
-                    .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
-                    .offset(x: max(0, width * CGFloat(progress) - 5))
+                    .fill(.white)
+                    .frame(width: knob, height: knob)
+                    .shadow(color: .black.opacity(0.28), radius: 4, y: 1)
+                    .offset(x: max(0, width * CGFloat(progress) - knob / 2))
+                    .animation(.spring(response: 0.24, dampingFraction: 0.8), value: scrubFraction == nil)
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
@@ -1142,8 +1116,6 @@ private struct SlimPlaybackProgressBar: View {
             .accessibilityElement()
             .accessibilityLabel("Playback progress")
             .accessibilityValue(String(format: "%.0f percent", progress * 100))
-            .liquidGlass(prominent: true)
-
         }
     }
 }
