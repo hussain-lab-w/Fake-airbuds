@@ -520,81 +520,91 @@ struct ContentView: View {
                 coldStartState
                     .frame(width: proxy.size.width, height: proxy.size.height)
             } else {
+                // Apple Music proportions: header, large cover, then the controls
+                // docked in the lower third over the artwork's own blur.
+                let coverSide = max(190, min(proxy.size.width - 44, proxy.size.height * 0.46))
                 ZStack {
-                    fullBleedArtwork(size: proxy.size)
+                    playerBackdrop(size: proxy.size)
 
-                    VStack(spacing: 14) {
+                    VStack(spacing: 0) {
                         deckHeader
-                        Spacer(minLength: 0)
-                        deckIdentity
-                        playerSignalChips
-                        deckProgress
-                        deckTransport
-                            .padding(.top, 2)
-                        deckActionRow
+                            .padding(.horizontal, 20)
                             .padding(.top, 4)
-                        if let message = player.playbackMessage {
-                            Label(message, systemImage: "exclamationmark.triangle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
+                        Spacer(minLength: 10)
+                        coverView(side: coverSide)
+                        Spacer(minLength: 10)
+                        VStack(spacing: 12) {
+                            deckIdentity
+                            playerSignalChips
+                            deckProgress
+                            deckTransport
+                                .padding(.top, 2)
+                            deckActionRow
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 6)
-                    .padding(.bottom, 18)
-                    .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
-                    // The deck sits on artwork, so it always resolves against a
-                    // dark backdrop regardless of the app appearance.
-                    .environment(\.colorScheme, .dark)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
                 }
+                .environment(\.colorScheme, .dark)
             }
         }
         .ignoresSafeArea(edges: .horizontal)
     }
 
-    /// The album artwork filling the whole player, with a scrim that keeps the
-    /// controls legible without hiding the cover.
-    private func fullBleedArtwork(size: CGSize) -> some View {
+    /// The artwork itself, blurred, filling the whole player. No flat base colour
+    /// underneath, so the screen never shows an empty black band.
+    private func playerBackdrop(size: CGSize) -> some View {
         ZStack {
-            ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
-            if vinylMode {
-                VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
-                    .frame(width: min(size.width, size.height) * 0.76)
-                    .id(player.currentItem?.persistentID)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            } else if let artwork = player.currentArtwork {
-                // The cover keeps its true aspect ratio — it is never stretched.
-                // The blurred copy behind it fills the rest of the player.
+            Color.black
+            if let artwork = player.currentArtwork {
                 Image(uiImage: artwork)
                     .resizable()
                     .scaledToFill()
                     .frame(width: size.width, height: size.height)
-                    .blur(radius: 52)
-                    .scaleEffect(1.18)
-                    .opacity(0.85)
+                    .blur(radius: 64)
+                    .scaleEffect(1.35)
+                    .opacity(0.95)
                     .clipped()
-                Image(uiImage: artwork)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: size.width, height: size.height)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: .black.opacity(0.35), radius: 26, y: 12)
-                    .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.012 : 1)
-                    .padding(.horizontal, 4)
-                    .id(player.currentItem?.persistentID)
-                    .transition(.opacity)
-                    .animation(reduceMotion ? nil : Motion.crossfade, value: player.currentItem?.persistentID)
             }
-            // Top scrim for the header, bottom scrim for the transport.
             LinearGradient(
-                colors: [.black.opacity(0.42), .black.opacity(0.06), .black.opacity(0.10), .black.opacity(0.72)],
+                colors: [.black.opacity(0.45), .black.opacity(0.12), .black.opacity(0.30), .black.opacity(0.72)],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .allowsHitTesting(false)
         }
         .frame(width: size.width, height: size.height)
         .clipped()
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    /// The cover keeps its true aspect ratio, inside a square frame.
+    private func coverView(side: CGFloat) -> some View {
+        Group {
+            if vinylMode {
+                VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
+            } else if let artwork = player.currentArtwork {
+                Image(uiImage: artwork)
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: .black.opacity(0.42), radius: 30, y: 14)
+            } else {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(.white.opacity(0.08))
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 46, weight: .light))
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+            }
+        }
+        .frame(width: side, height: side)
+        .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.012 : 1)
+        .id(player.currentItem?.persistentID)
+        .transition(.opacity)
+        .animation(reduceMotion ? nil : Motion.crossfade, value: player.currentItem?.persistentID)
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
             guard let item = player.currentItem else { return }
@@ -672,10 +682,10 @@ struct ContentView: View {
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(EW27Design.primaryText.opacity(0.82))
-                    .frame(width: 42, height: 42)
-                    .glassCircle()
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.85))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel("Playback options")
         }
@@ -698,9 +708,9 @@ struct ContentView: View {
     private func signalChip(icon: String, text: String) -> some View {
         Label(text, systemImage: icon)
             .font(EW27Type.chip)
-            .foregroundStyle(EW27Design.primaryText.opacity(0.72))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.62))
             .padding(.horizontal, 9)
-            .frame(height: 28)
+            .frame(height: 26)
             .glassChip()
     }
 
@@ -1099,8 +1109,8 @@ private struct SlimPlaybackProgressBar: View {
             let knob: CGFloat = scrubFraction == nil ? 11 : 15
             ZStack(alignment: .leading) {
                 Capsule(style: .continuous)
-                    .fill(.white.opacity(0.20))
-                    .frame(height: 5)
+                    .fill(.white.opacity(0.30))
+                    .frame(height: 6)
                 Capsule(style: .continuous)
                     .fill(
                         LinearGradient(
@@ -1109,7 +1119,7 @@ private struct SlimPlaybackProgressBar: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: width * CGFloat(progress), height: 5)
+                    .frame(width: width * CGFloat(progress), height: 6)
                 Circle()
                     .fill(.white)
                     .frame(width: knob, height: knob)

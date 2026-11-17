@@ -59,7 +59,7 @@ struct QueueView: View {
                             Button {
                                 model.clearUpcoming()
                             } label: {
-                                Image(systemName: "xmark.circle")
+                                Image(systemName: "text.line.last.and.arrowtriangle.forward")
                             }
                             .accessibilityLabel("Clear upcoming tracks")
                             .accessibilityHint("Keeps the currently playing track")

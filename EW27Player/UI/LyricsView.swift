@@ -223,7 +223,7 @@ struct LyricsView: View {
                 let state = playbackState(lines: lines, time: time)
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: 22) {
+                        LazyVStack(alignment: .leading, spacing: 16) {
                             Color.clear.frame(height: geo.size.height * 0.38)
                             ForEach(lyricRows) { row in
                                 rowView(row, lines: lines, time: time, state: state)
@@ -273,7 +273,7 @@ struct LyricsView: View {
         let distance = abs(index - max(state.focusIndex, 0))
         let lineTime = mappedTime(time, for: line)
         let relaxed = autoScrollPaused
-        let lyricSize = min(28, max(22, CGFloat(fontSize)))
+        let lyricSize = min(32, max(23, CGFloat(fontSize)))
         let opacity: Double = isSinging ? 1 : (relaxed ? 0.68 : 0.52)
         let blurRadius: CGFloat = (reduceMotion || relaxed || isSinging) ? 0 : CGFloat(min(3, Double(max(0, distance - 1)) * 0.8))
         return FlowLayout(spacing: lyricSize * 0.22) {
