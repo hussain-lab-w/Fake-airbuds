@@ -89,7 +89,7 @@ struct PlaybackControlsView: View {
                         Button(String(format: "%g×", value)) { player.setSpeed(value) }
                             .font(.caption.weight(.semibold))
                             .frame(maxWidth: .infinity).padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(abs(speedState.displayed - value) < 0.02 ? Color.cyan.opacity(0.18) : EW27Design.primaryText.opacity(0.055)))
+                            .glassChip(isSelected: abs(speedState.displayed - value) < 0.02)
                             .foregroundStyle(abs(speedState.displayed - value) < 0.02 ? .cyan : EW27Design.primaryText.opacity(0.8))
                             .buttonStyle(.plain)
                     }

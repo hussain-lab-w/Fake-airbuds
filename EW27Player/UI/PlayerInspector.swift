@@ -57,7 +57,7 @@ struct PlayerInspector: View {
                     }
                 }
                 .padding(12)
-                .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .glassRow(radius: 15)
             }
         }
     }
@@ -80,6 +80,6 @@ private struct InspectorPill: View {
             .lineLimit(1)
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(EW27Design.primaryText.opacity(0.08), in: Capsule())
+            .glassChip()
     }
 }

@@ -231,8 +231,7 @@ struct ContentView: View {
             .foregroundStyle(isSelected ? Color.black : EW27Design.primaryText.opacity(0.68))
             .frame(maxWidth: .infinity)
             .frame(height: 38)
-            .background(isSelected ? Color.cyan : EW27Design.primaryText.opacity(0.07), in: Capsule())
-            .overlay(Capsule().stroke(isSelected ? Color.cyan.opacity(0.8) : EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+            .glassChip(isSelected: isSelected)
         }
         .buttonStyle(MusicPressStyle())
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -285,7 +284,7 @@ struct ContentView: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(.cyan)
                     .frame(width: 52, height: 52)
-                    .background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .glassRow(radius: 16)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("YOUR COLLECTION").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
                     Text("\(library.allSongs.count) songs · \(library.playlists.count) playlists")
@@ -295,8 +294,7 @@ struct ContentView: View {
                 Image(systemName: "waveform").font(.system(size: 19, weight: .medium)).foregroundStyle(EW27Design.primaryText.opacity(0.4))
             }
             .padding(16)
-            .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+            .liquidGlass()
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -342,7 +340,7 @@ struct ContentView: View {
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(.cyan)
                         .frame(width: 52, height: 52)
-                        .background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .glassRow(radius: 16)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("SOUND STUDIO").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
                         Text(player.selectedPreset.rawValue)
@@ -360,8 +358,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
-            .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+            .liquidGlass()
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -375,8 +372,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(EW27Design.primaryText.opacity(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(EW27Design.primaryText.opacity(0.08), lineWidth: 1))
+        .liquidGlass()
     }
 
     private func studioMetric(icon: String, title: String, value: String) -> some View {
@@ -404,7 +400,7 @@ struct ContentView: View {
             .lineLimit(1)
             .padding(.horizontal, 10)
             .frame(height: 28)
-            .background(EW27Design.primaryText.opacity(0.06), in: Capsule())
+            .glassChip()
     }
 
     /// A restrained tint borrowed from the current artwork, so glass surfaces
@@ -578,7 +574,7 @@ struct ContentView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(EW27Design.primaryText.opacity(0.82))
                     .frame(width: 42, height: 42)
-                    .background(EW27Design.primaryText.opacity(0.075), in: Circle())
+                    .glassCircle()
             }
             .accessibilityLabel("Playback options")
         }
@@ -637,8 +633,7 @@ struct ContentView: View {
             .foregroundStyle(EW27Design.primaryText.opacity(0.72))
             .padding(.horizontal, 9)
             .frame(height: 28)
-            .background(EW27Design.primaryText.opacity(0.07), in: Capsule())
-            .overlay(Capsule().stroke(EW27Design.primaryText.opacity(0.10), lineWidth: 1))
+            .glassChip()
     }
 
     private var artworkActionRail: some View {
@@ -662,8 +657,7 @@ struct ContentView: View {
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(active ? Color.black : EW27Design.primaryText)
                 .frame(width: 34, height: 34)
-                .background(active ? Color.cyan : Color.black.opacity(0.46), in: Circle())
-                .overlay(Circle().stroke(EW27Design.primaryText.opacity(active ? 0.4 : 0.2), lineWidth: 1))
+                .glassCircle(isActive: active)
         }
         .buttonStyle(MusicPressStyle())
         .accessibilityLabel(label)
@@ -757,7 +751,7 @@ struct ContentView: View {
                             .foregroundStyle(abs(player.speed - value) < 0.02 ? Color.black : EW27Design.primaryText.opacity(0.76))
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
-                            .background(abs(player.speed - value) < 0.02 ? Color.cyan : EW27Design.primaryText.opacity(0.07), in: Capsule())
+                            .glassChip(isSelected: abs(player.speed - value) < 0.02)
                     }
                 }
                 PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
@@ -798,7 +792,7 @@ struct ContentView: View {
                     .font(.system(size: size, weight: .semibold))
                     .foregroundStyle(.primary)
                     .frame(width: 44, height: 48)
-                .background(.thinMaterial, in: Circle())
+                .glassCircle()
         }
         .buttonStyle(MusicPressStyle())
         .accessibilityLabel(label)
@@ -939,7 +933,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(isCurrent ? Color.cyan.opacity(0.075) : EW27Design.primaryText.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassRow(isSelected: isCurrent, radius: 16)
         }
         .buttonStyle(MusicPressStyle())
         .listRowInsets(EdgeInsets(top: 3, leading: 14, bottom: 3, trailing: 14))

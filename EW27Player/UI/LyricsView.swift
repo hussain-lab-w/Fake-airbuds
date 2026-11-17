@@ -87,7 +87,7 @@ struct LyricsView: View {
                         .foregroundStyle(EW27Design.primaryText.opacity(0.88))
                         .padding(.horizontal, 12)
                         .frame(height: 40)
-                        .background(EW27Design.primaryText.opacity(0.09), in: Capsule())
+                        .glassChip()
                 }
                 .buttonStyle(MusicPressStyle())
                 .accessibilityLabel("Return to player")
@@ -328,7 +328,7 @@ struct LyricsView: View {
                     .foregroundStyle(.cyan)
                     .padding(.horizontal, 13)
                     .padding(.vertical, 7)
-                    .background(EW27Design.primaryText.opacity(0.055), in: Capsule())
+                    .glassChip()
                     .overlay(Capsule().stroke(.cyan.opacity(0.38), lineWidth: 1))
             }
             .buttonStyle(.plain)
