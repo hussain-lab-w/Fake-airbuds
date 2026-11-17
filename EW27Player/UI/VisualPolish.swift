@@ -249,19 +249,41 @@ struct GlassPanel<Content: View>: View {
     }
 }
 
-// SDK-compatible Liquid Glass surface. Standard SwiftUI bars and controls pick up
-// Apple's native treatment automatically on newer OS releases; custom surfaces use
-// this adaptive fallback so the app remains deployable to iOS 17.
+// Adaptive glass surface.
+//
+// On iOS 26 the real Liquid Glass material is used (Apple's `glassEffect`),
+// which refracts and lenses the content behind it. Older systems — the app
+// still deploys to iOS 17 — fall back to a layered material that mimics the
+// same depth and highlight, so every call site reads identically.
 struct LiquidGlassModifier: ViewModifier {
     var isProminent = false
+    var tint: Color?
+    var isInteractive = false
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private var cornerRadius: CGFloat { isProminent ? 22 : 18 }
+    private var cornerRadius: CGFloat { isProminent ? 26 : 20 }
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous) }
 
     @ViewBuilder
     func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(glass, in: shape)
+        } else {
+            legacyGlass(content)
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private var glass: Glass {
+        var value: Glass = .regular
+        if let tint { value = value.tint(tint) }
+        if isInteractive { value = value.interactive() }
+        return value
+    }
+
+    private func legacyGlass(_ content: Content) -> some View {
         content
             .background(
                 reduceTransparency
@@ -271,7 +293,7 @@ struct LiquidGlassModifier: ViewModifier {
             )
             .overlay {
                 LinearGradient(
-                    colors: [EW27Design.primaryText.opacity(isProminent ? 0.10 : 0.06), .clear],
+                    colors: [EW27Design.primaryText.opacity(isProminent ? 0.12 : 0.07), .clear],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -289,7 +311,9 @@ struct LiquidGlassModifier: ViewModifier {
 }
 
 extension View {
-    func liquidGlass(prominent: Bool = false) -> some View {
-        modifier(LiquidGlassModifier(isProminent: prominent))
+    /// Liquid Glass surface. Uses Apple's native material on iOS 26 and an
+    /// adaptive material fallback on earlier systems.
+    func liquidGlass(prominent: Bool = false, tint: Color? = nil, interactive: Bool = false) -> some View {
+        modifier(LiquidGlassModifier(isProminent: prominent, tint: tint, isInteractive: interactive))
     }
 }
