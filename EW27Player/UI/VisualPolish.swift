@@ -405,6 +405,28 @@ extension View {
     }
 }
 
+/// Reports the top edge of a scroll container's content, so chrome can react
+/// to the scroll direction.
+struct DockScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    func dockScrollTracking() -> some View {
+        background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: DockScrollOffsetKey.self,
+                    value: proxy.frame(in: .named("ew27.dockScroll")).minY
+                )
+            }
+        )
+    }
+}
+
 /// Swaps a symbol with a spring morph instead of a hard cut.
 struct EW27SymbolReplace: ViewModifier {
     @ViewBuilder

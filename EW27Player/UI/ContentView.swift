@@ -15,6 +15,8 @@ struct ContentView: View {
     @State private var showLyrics = false
     @State private var showPlaybackSettings = false
     @State private var albumArtMotion = false
+    @State private var dockVisible = true
+    @State private var lastScrollOffset: CGFloat = 0
     @AppStorage("ew27.appearance") private var appearanceRawValue = EW27Appearance.system.rawValue
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var playerNamespace
@@ -61,7 +63,19 @@ struct ContentView: View {
                     .padding(.top, 7)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            appTabDock
+            if dockVisible {
+                appTabDock
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .onPreferenceChange(DockScrollOffsetKey.self) { offset in
+            defer { lastScrollOffset = offset }
+            guard selectedTab != .player, !showLyrics else { return }
+            let delta = offset - lastScrollOffset
+            guard abs(delta) > 6 else { return }
+            let shouldShow = delta > 0
+            guard shouldShow != dockVisible else { return }
+            withAnimation(reduceMotion ? nil : Motion.snappy) { dockVisible = shouldShow }
         }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
         .sheet(isPresented: $showQueue) {
@@ -78,6 +92,11 @@ struct ContentView: View {
             if reduced { albumArtMotion = false } else { startAlbumArtMotion() }
         }
         .animation(reduceMotion ? nil : Motion.crossfade, value: selectedTab)
+        .onChange(of: selectedTab) { _, _ in
+            if !dockVisible {
+                withAnimation(reduceMotion ? nil : Motion.snappy) { dockVisible = true }
+            }
+        }
     }
 
     private var appTabDock: some View {
@@ -256,6 +275,8 @@ struct ContentView: View {
                 .padding(.bottom, 92)
             }
             .background { ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint) }
+            .coordinateSpace(name: "ew27.dockScroll")
+            .dockScrollTracking()
             .scrollBounceBehavior(.basedOnSize)
             .buttonStyle(MusicPressStyle())
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
@@ -268,6 +289,8 @@ struct ContentView: View {
             List { content() }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .coordinateSpace(name: "ew27.dockScroll")
+            .dockScrollTracking()
             .background {
                 ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
             }
@@ -507,28 +530,82 @@ struct ContentView: View {
                 coldStartState
                     .frame(width: proxy.size.width, height: proxy.size.height)
             } else {
-                let artworkSize = min(proxy.size.width - 36, max(190, proxy.size.height * 0.49))
-                VStack(alignment: .leading, spacing: 10) {
-                    deckHeader
-                    deckArtwork
-                        .frame(width: artworkSize, height: artworkSize)
-                        .frame(maxWidth: .infinity)
-                    deckIdentity
-                    playerSignalChips
-                    deckProgress
-                    deckTransport
-                    if let message = player.playbackMessage {
-                        Label(message, systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
+                ZStack {
+                    fullBleedArtwork(size: proxy.size)
+
+                    VStack(spacing: 12) {
+                        deckHeader
+                        Spacer(minLength: 0)
+                        deckIdentity
+                        playerSignalChips
+                        deckProgress
+                        deckTransport
+                        if let message = player.playbackMessage {
+                            Label(message, systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 6)
+                    .padding(.bottom, 12)
+                    .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+                    // The deck sits on artwork, so it always resolves against a
+                    // dark backdrop regardless of the app appearance.
+                    .environment(\.colorScheme, .dark)
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 8)
-                .padding(.bottom, 10)
-                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
             }
         }
+        .ignoresSafeArea(edges: .horizontal)
+    }
+
+    /// The album artwork filling the whole player, with a scrim that keeps the
+    /// controls legible without hiding the cover.
+    private func fullBleedArtwork(size: CGSize) -> some View {
+        ZStack {
+            ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
+            if vinylMode {
+                VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
+                    .frame(width: min(size.width, size.height) * 0.76)
+                    .id(player.currentItem?.persistentID)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+            } else if let artwork = player.currentArtwork {
+                Image(uiImage: artwork)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+                    .id(player.currentItem?.persistentID)
+                    .transition(.opacity)
+                    .animation(reduceMotion ? nil : Motion.crossfade, value: player.currentItem?.persistentID)
+            }
+            // Top scrim for the header, bottom scrim for the transport.
+            LinearGradient(
+                colors: [.black.opacity(0.42), .black.opacity(0.06), .black.opacity(0.10), .black.opacity(0.72)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+        }
+        .frame(width: size.width, height: size.height)
+        .clipped()
+        .overlay(alignment: .topTrailing) { artworkActionRail }
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            guard let item = player.currentItem else { return }
+            haptic()
+            favorites.toggle(item)
+        }
+        .gesture(
+            DragGesture(minimumDistance: 28)
+                .onEnded { value in
+                    guard abs(value.translation.width) > 62,
+                          abs(value.translation.width) > abs(value.translation.height) else { return }
+                    haptic()
+                    if value.translation.width < 0 { player.nextTrack() } else { player.previousTrack() }
+                }
+        )
+        .accessibilityHint("Swipe left or right to change tracks. Double tap to favorite.")
     }
 
     private var coldStartState: some View {
