@@ -258,25 +258,58 @@ struct GlassSurfaceModifier<S: Shape>: ViewModifier {
     var isProminent = false
     var tint: Color?
     var isInteractive = false
+    /// Lets the backdrop show through more strongly. Reserved for surfaces that
+    /// float over artwork, where legibility is not carried by the pane itself.
+    var isTranslucent = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.glassEffect(glass, in: shape)
+            GlassEffectContainer {
+                content
+                    .glassEffect(glass, in: shape)
+                    .overlay { specular }
+            }
+            .shadow(
+                color: .black.opacity(isProminent ? 0.20 : 0.10),
+                radius: reduceMotion || reduceTransparency ? 0 : (isProminent ? 14 : 8),
+                y: reduceMotion || reduceTransparency ? 0 : (isProminent ? 6 : 3)
+            )
         } else {
             fallback(content)
         }
     }
 
+    /// The refraction surface. `.clear` lets the artwork read through on the
+    /// floating panes; `.regular` keeps text legible on content panes.
     @available(iOS 26.0, *)
     private var glass: Glass {
-        var value: Glass = .regular
+        var value: Glass = isTranslucent ? .clear : .regular
         if let tint { value = value.tint(tint) }
         if isInteractive { value = value.interactive() }
         return value
+    }
+
+    /// The specular edge: a bright top rim fading to a faint bottom rim. This is
+    /// what reads as a pane of glass rather than a flat translucent rectangle.
+    private var specular: some View {
+        shape.stroke(
+            LinearGradient(
+                colors: [
+                    .white.opacity(colorScheme == .dark ? 0.34 : 0.52),
+                    .white.opacity(colorScheme == .dark ? 0.06 : 0.14),
+                    .white.opacity(colorScheme == .dark ? 0.10 : 0.24)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            ),
+            lineWidth: 0.8
+        )
+        .allowsHitTesting(false)
     }
 
     private func fallback(_ content: Content) -> some View {
@@ -287,9 +320,7 @@ struct GlassSurfaceModifier<S: Shape>: ViewModifier {
                     : (isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial)),
                 in: shape
             )
-            .overlay {
-                shape.stroke(EW27Design.primaryText.opacity(isProminent ? 0.18 : 0.10), lineWidth: 1)
-            }
+            .overlay { specular }
             .shadow(
                 color: .black.opacity(isProminent ? 0.18 : 0.09),
                 radius: reduceMotion || reduceTransparency ? 0 : (isProminent ? 12 : 7),
@@ -300,12 +331,18 @@ struct GlassSurfaceModifier<S: Shape>: ViewModifier {
 
 extension View {
     /// A Liquid Glass panel. `prominent` lifts it above the page.
-    func liquidGlass(prominent: Bool = false, tint: Color? = nil, interactive: Bool = false) -> some View {
+    func liquidGlass(
+        prominent: Bool = false,
+        tint: Color? = nil,
+        interactive: Bool = false,
+        translucent: Bool = false
+    ) -> some View {
         modifier(GlassSurfaceModifier(
             shape: RoundedRectangle(cornerRadius: prominent ? EW27Radius.panel : EW27Radius.card, style: .continuous),
             isProminent: prominent,
             tint: tint,
-            isInteractive: interactive
+            isInteractive: interactive,
+            isTranslucent: translucent
         ))
     }
 
@@ -328,10 +365,10 @@ extension View {
     }
 
     /// A glass circle — transport and toolbar buttons.
-    func glassCircle(isActive: Bool = false) -> some View {
+    func glassCircle(isActive: Bool = false, tint: Color? = nil) -> some View {
         modifier(GlassSurfaceModifier(
             shape: Circle(),
-            tint: isActive ? EW27Design.accent.opacity(0.32) : nil,
+            tint: tint ?? (isActive ? EW27Design.accent.opacity(0.32) : nil),
             isInteractive: true
         ))
     }
@@ -353,6 +390,53 @@ extension View {
     /// Extends the backdrop under adjacent glass bars and the safe area.
     func ew27BackgroundExtension() -> some View {
         modifier(BackgroundExtensionModifier())
+    }
+}
+
+/// Swaps a symbol with a spring morph instead of a hard cut.
+struct EW27SymbolReplace: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content.contentTransition(.symbolEffect(.replace))
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func ew27SymbolReplace() -> some View { modifier(EW27SymbolReplace()) }
+}
+
+/// Play/pause drawn from shapes so the two states spring into each other.
+struct EW27PlayPauseIcon: View {
+    let isPlaying: Bool
+    var size: CGFloat = 20
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var progress: CGFloat { isPlaying ? 1 : 0 }
+
+    var body: some View {
+        ZStack {
+            Image(systemName: "play.fill")
+                .font(.system(size: size, weight: .semibold))
+                .opacity(1 - progress)
+                .scaleEffect(1 - progress * 0.18)
+                .offset(x: progress * size * 0.14)
+            HStack(spacing: max(3, size * 0.17)) {
+                RoundedRectangle(cornerRadius: max(1.5, size * 0.07), style: .continuous)
+                    .frame(width: max(3.5, size * 0.22), height: size * 0.84)
+                RoundedRectangle(cornerRadius: max(1.5, size * 0.07), style: .continuous)
+                    .frame(width: max(3.5, size * 0.22), height: size * 0.84)
+            }
+            .opacity(progress)
+            .scaleEffect(0.8 + progress * 0.2)
+            .offset(x: (1 - progress) * -size * 0.14)
+        }
+        .frame(width: size * 1.3, height: size * 1.3)
+        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.78), value: isPlaying)
+        .accessibilityLabel(isPlaying ? "Pause" : "Play")
     }
 }
 

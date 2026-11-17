@@ -108,11 +108,10 @@ struct ContentView: View {
             }
         }
         .padding(7)
-        .liquidGlass(prominent: true)
+        .liquidGlass(prominent: true, translucent: true)
         .padding(.horizontal, 18)
         .padding(.top, 8)
         .padding(.bottom, 6)
-        .background(.clear)
     }
 
     private func startAlbumArtMotion() {
@@ -410,6 +409,20 @@ struct ContentView: View {
         return Color(uiColor: tint).opacity(0.28)
     }
 
+    /// The lyric line currently being sung, mirroring the lyrics reader's
+    /// clock and sync offset.
+    private func miniSubtitle(at date: Date) -> String {
+        let fallback = player.currentItem?.artist ?? "EW27 Player"
+        guard let lyrics = player.lyricsStore.lyrics, lyrics.isSynced else { return fallback }
+        let time = player.lyricPlaybackTime(at: date) + player.lyricsStore.syncOffset
+        var current: String?
+        for line in lyrics.lines {
+            if line.start <= time { current = line.plainText } else { break }
+        }
+        guard let current, !current.isEmpty else { return fallback }
+        return current
+    }
+
     private var miniPlayer: some View {
         HStack(spacing: 12) {
             Group {
@@ -430,21 +443,26 @@ struct ContentView: View {
                 Text(player.currentItem?.title ?? "No track selected")
                     .font(.caption.weight(.semibold))
                     .lineLimit(1)
-                Text(player.currentItem?.artist ?? "EW27 Player")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                // Shows the line being sung right now when lyrics are synced;
+                // falls back to the artist otherwise.
+                TimelineView(.periodic(from: .now, by: 0.4)) { timeline in
+                    Text(miniSubtitle(at: timeline.date))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .contentTransition(.opacity)
+                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: miniSubtitle(at: timeline.date))
+                }
                 if let remaining = player.sleepRemaining {
                     Text(String(format: "Sleep %.0fs", remaining)).font(.caption2).foregroundStyle(.cyan)
                 }
             }
             Spacer(minLength: 4)
             Button { haptic(); player.togglePlayPause() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 15, weight: .bold))
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(Color.cyan))
-                    .foregroundStyle(.black)
+                EW27PlayPauseIcon(isPlaying: player.isPlaying, size: 14)
+                    .foregroundStyle(EW27Design.primaryText)
+                    .frame(width: 38, height: 38)
+                    .glassCircle(tint: EW27Design.cyan.opacity(0.30))
             }
             .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
             .buttonStyle(MusicPressStyle())
@@ -458,7 +476,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .liquidGlass(prominent: true, tint: artworkGlassTint, interactive: true)
+        .liquidGlass(prominent: true, tint: artworkGlassTint, interactive: true, translucent: true)
         .overlay(alignment: .bottom) {
             MiniProgressLine(clock: player.clock)
             .padding(.horizontal, 14)
@@ -713,13 +731,12 @@ struct ContentView: View {
         HStack(spacing: 32) {
             playerActionButton("backward.end.fill", label: "Previous track", size: 21) { player.previousTrack() }
             Button { haptic(); player.togglePlayPause() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 25, weight: .bold))
+                EW27PlayPauseIcon(isPlaying: player.isPlaying, size: 26)
                     .foregroundStyle(Color(red: 0.03, green: 0.07, blue: 0.11))
-                    .offset(x: player.isPlaying ? 0 : 2)
                     .frame(width: 72, height: 72)
-                    .background(Circle().fill(Color.cyan.gradient))
-                    .shadow(color: .cyan.opacity(0.24), radius: 18, y: 7)
+                    .background(Circle().fill(EW27Design.cyan.gradient))
+                    .overlay(Circle().stroke(.white.opacity(0.22), lineWidth: 1))
+                    .shadow(color: EW27Design.cyan.opacity(0.30), radius: 18, y: 7)
             }
             .buttonStyle(MusicPressStyle())
             .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
