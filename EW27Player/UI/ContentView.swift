@@ -295,8 +295,7 @@ struct ContentView: View {
                 Image(systemName: "waveform").font(.system(size: 19, weight: .medium)).foregroundStyle(EW27Design.primaryText.opacity(0.4))
             }
             .padding(16)
-            .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+            .liquidGlass(prominent: false)
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -360,8 +359,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
-            .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+            .liquidGlass(prominent: false)
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -375,8 +373,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(EW27Design.primaryText.opacity(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(EW27Design.primaryText.opacity(0.08), lineWidth: 1))
+        .liquidGlass(prominent: false)
     }
 
     private func studioMetric(icon: String, title: String, value: String) -> some View {
@@ -543,9 +540,7 @@ struct ContentView: View {
         }
         .padding(28)
         .frame(maxWidth: 340)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(EW27Design.primaryText.opacity(0.14), lineWidth: 1))
-        .shadow(color: .black.opacity(0.28), radius: 24, y: 12)
+        .liquidGlass(prominent: true)
     }
 
     private var deckHeader: some View {
@@ -771,8 +766,7 @@ struct ContentView: View {
         .tint(.cyan)
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+        .liquidGlass(prominent: false)
     }
 
     private func deckActionButton(_ title: String, icon: String, isActive: Bool, action: @escaping () -> Void) -> some View {
@@ -935,7 +929,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(isCurrent ? Color.cyan.opacity(0.075) : EW27Design.primaryText.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .liquidGlass(prominent: false)
         }
         .buttonStyle(MusicPressStyle())
         .listRowInsets(EdgeInsets(top: 3, leading: 14, bottom: 3, trailing: 14))
