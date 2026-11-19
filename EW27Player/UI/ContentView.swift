@@ -929,7 +929,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .liquidGlass(prominent: false)
+            .background(isCurrent ? Color.cyan.opacity(0.075) : EW27Design.primaryText.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(MusicPressStyle())
         .listRowInsets(EdgeInsets(top: 3, leading: 14, bottom: 3, trailing: 14))

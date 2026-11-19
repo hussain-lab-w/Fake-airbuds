@@ -187,7 +187,11 @@ private struct QueueRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 11)
-            .liquidGlass(prominent: false)
+            .background(isCurrent ? Color.cyan.opacity(0.10) : EW27Design.primaryText.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isCurrent ? Color.cyan.opacity(0.28) : EW27Design.primaryText.opacity(0.07), lineWidth: 1)
+            }
         }
         .buttonStyle(MusicPressStyle())
         .animation(reduceMotion ? nil : Motion.snappy, value: isCurrent)
