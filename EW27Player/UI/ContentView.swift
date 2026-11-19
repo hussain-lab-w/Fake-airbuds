@@ -577,6 +577,7 @@ struct ContentView: View {
         .clipped()
         .ignoresSafeArea()
         .allowsHitTesting(false)
+        .drawingGroup()
     }
 
     /// The cover keeps its true aspect ratio, inside a square frame.

@@ -14,6 +14,10 @@ struct LyricsView: View {
     @State private var autoScrollPaused = false
     @State private var showTransportBar = false
     @State private var resumeAutoScrollTask: Task<Void, Never>?
+    /// Display time for synced lyrics, updated on a timer so we don't rebuild the
+    /// entire SwiftUI tree on every display refresh. Kept lower than the player's
+    /// 30 Hz progress timer while remaining smooth enough for word-by-word highlights.
+    @State private var lyricDisplayTime: TimeInterval = 0
 
     private static let gapThreshold: TimeInterval = 3.5
     private static let scrollAnchor = UnitPoint(x: 0.5, y: 0.38)
@@ -218,36 +222,38 @@ struct LyricsView: View {
     private func syncedContent(_ lines: [LyricLine]) -> some View {
         GeometryReader { geo in
             let lyricRows = rows(for: lines)
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !player.isPlaying)) { context in
-                let time = player.lyricPlaybackTime(at: context.date) + store.syncOffset
-                let state = playbackState(lines: lines, time: time)
-                ScrollViewReader { proxy in
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: 16) {
-                            Color.clear.frame(height: geo.size.height * 0.38)
-                            ForEach(lyricRows) { row in
-                                rowView(row, lines: lines, time: time, state: state)
-                            }
-                            Color.clear.frame(height: geo.size.height * 0.62 + 120)
+            let time = lyricDisplayTime + store.syncOffset
+            let state = playbackState(lines: lines, time: time)
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        Color.clear.frame(height: geo.size.height * 0.38)
+                        ForEach(lyricRows) { row in
+                            rowView(row, lines: lines, time: time, state: state)
                         }
-                        .padding(.leading, 24)
-                        .padding(.trailing, 20)
+                        Color.clear.frame(height: geo.size.height * 0.62 + 120)
                     }
-                    .simultaneousGesture(DragGesture(minimumDistance: 3).onChanged { value in
-                        pauseAutoScroll()
-                        if abs(value.translation.height) > 6 { showTransportBar = true }
-                    })
-                    .onChange(of: state.scrollID) { _, id in
-                        guard !autoScrollPaused, let id else { return }
-                        withAnimation(reduceMotion ? nil : Motion.sheet) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
-                    }
-                    .onChange(of: autoScrollPaused) { _, paused in
-                        guard !paused, let id = state.scrollID else { return }
-                        withAnimation(reduceMotion ? nil : Motion.sheet) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
-                    }
-                    .mask(edgeFade(height: geo.size.height))
+                    .padding(.leading, 24)
+                    .padding(.trailing, 20)
                 }
+                .simultaneousGesture(DragGesture(minimumDistance: 3).onChanged { value in
+                    pauseAutoScroll()
+                    if abs(value.translation.height) > 6 { showTransportBar = true }
+                })
+                .onChange(of: state.scrollID) { _, id in
+                    guard !autoScrollPaused, let id else { return }
+                    withAnimation(reduceMotion ? nil : Motion.sheet) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
+                }
+                .onChange(of: autoScrollPaused) { _, paused in
+                    guard !paused, let id = state.scrollID else { return }
+                    withAnimation(reduceMotion ? nil : Motion.sheet) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
+                }
+                .mask(edgeFade(height: geo.size.height))
             }
+        }
+        .onReceive(Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()) { _ in
+            guard player.isPlaying, !autoScrollPaused else { return }
+            lyricDisplayTime = player.lyricPlaybackTime()
         }
     }
 
@@ -301,6 +307,7 @@ struct LyricsView: View {
         .accessibilityLabel("\(line.words.map { $0.text }.joined(separator: " ")) at \(String(format: "%.0f seconds", line.start))")
         .accessibilityHint("Tap to jump to this line. Long press to copy it.")
         .accessibilityAddTraits(.isButton)
+        .drawingGroup()
     }
 
     private func edgeFade(height: CGFloat) -> some View {
@@ -537,6 +544,7 @@ private struct InterludeDots: View {
         .padding(.vertical, 14)
         .opacity(isVisible ? (time > end - 0.3 ? max(0, (end - time) / 0.3) : 1) : 0.15)
         .animation(.easeInOut(duration: 0.3), value: isVisible)
+        .drawingGroup()
     }
 }
 
@@ -596,6 +604,7 @@ private struct SyncedLyricWord: View {
         .scaleEffect(longWordScale, anchor: .bottomLeading)
         .offset(y: isCurrent ? -1.5 : 0)
         .animation(.easeInOut(duration: 0.22), value: isCurrent)
+        .drawingGroup()
     }
 }
 
