@@ -26,7 +26,7 @@ struct EQCurveView: View {
             context.stroke(zero, with: .color(EW27Design.primaryText.opacity(0.16)), lineWidth: 1)
         }
         .frame(height: 100)
-        .background(EW27Design.primaryText.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+        .glassRow(radius: 12)
         .overlay(alignment: .topLeading) {
             if let profileName { Text("Custom profile: \(profileName)").font(.caption2).foregroundStyle(.cyan).padding(8) }
         }

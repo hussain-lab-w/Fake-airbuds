@@ -28,12 +28,7 @@ struct RouteAccessoryCard: View {
                     Spacer(minLength: 0)
                 }
                 .padding(18)
-                .background(
-                    LinearGradient(colors: [Color(red: 0.12, green: 0.2, blue: 0.38).opacity(0.97), Color(red: 0.16, green: 0.12, blue: 0.34).opacity(0.97)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-                )
-                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(LinearGradient(colors: [EW27Design.primaryText.opacity(0.32), .cyan.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
-                .shadow(color: .black.opacity(0.32), radius: 18, y: 9)
+                .liquidGlass(prominent: true, tint: EW27Design.accent.opacity(0.18))
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))

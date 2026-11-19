@@ -28,3 +28,10 @@ struct TrackLyrics: Codable, Equatable {
 
     var isSynced: Bool { !lines.isEmpty }
 }
+
+extension LyricLine {
+    /// Flattened line text for places that do not render word by word.
+    var plainText: String {
+        words.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+    }
+}

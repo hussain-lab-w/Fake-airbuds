@@ -70,23 +70,9 @@ enum EW27Design {
 
 struct EW27CardModifier: ViewModifier {
     let prominent: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        content
-            .background(
-                prominent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
-                in: RoundedRectangle(cornerRadius: EW27Design.cardRadius, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: EW27Design.cardRadius, style: .continuous)
-                    .stroke(EW27Design.primaryText.opacity(prominent ? 0.16 : 0.09), lineWidth: 1)
-            }
-            .shadow(
-                color: .black.opacity(prominent ? 0.18 : 0.08),
-                radius: reduceMotion ? 0 : (prominent ? 14 : 7),
-                y: reduceMotion ? 0 : (prominent ? 6 : 3)
-            )
+        content.liquidGlass(prominent: prominent)
     }
 }
 
@@ -109,7 +95,7 @@ struct EW27SectionLabel: View {
         Group {
             if let systemImage { Label(title, systemImage: systemImage) } else { Text(title) }
         }
-        .font(.caption.weight(.bold))
+        .font(EW27Type.label)
         .tracking(1.15)
         .foregroundStyle(EW27Design.accent)
         .textCase(nil)
@@ -197,21 +183,26 @@ struct ArtworkAuroraBackground: View {
             ZStack {
                 base
                 if let image {
+                    // Kept fairly present: Liquid Glass refracts whatever is
+                    // behind it, so a flat wash underneath makes every pane
+                    // read as plain frosted material.
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .scaleEffect(drift ? 1.16 : 1.10)
                         .offset(x: drift ? 12 : -10, y: drift ? -8 : 10)
-                        .blur(radius: 54)
-                        .opacity(colorScheme == .dark ? 0.32 : 0.22)
+                        .blur(radius: 38)
+                        .opacity(colorScheme == .dark ? 0.55 : 0.42)
                         .transition(.opacity)
                         .id(artworkKey)
                 }
-                Circle().fill(accent.opacity(colorScheme == .dark ? 0.30 : 0.18)).frame(width: 320, height: 320).blur(radius: 88)
-                    .offset(x: drift ? 110 : 62, y: drift ? -150 : -112)
-                Circle().fill(accent.opacity(colorScheme == .dark ? 0.16 : 0.10)).frame(width: 280, height: 280).blur(radius: 94)
-                    .offset(x: drift ? -98 : -58, y: drift ? 190 : 142)
+                Circle().fill(accent.opacity(colorScheme == .dark ? 0.42 : 0.26)).frame(width: 340, height: 340).blur(radius: 84)
+                    .offset(x: drift ? 112 : 64, y: drift ? -152 : -114)
+                Circle().fill(accent.opacity(colorScheme == .dark ? 0.26 : 0.18)).frame(width: 300, height: 300).blur(radius: 90)
+                    .offset(x: drift ? -100 : -60, y: drift ? 192 : 144)
+                Ellipse().fill(shade.opacity(colorScheme == .dark ? 0.10 : 0.30)).frame(width: 420, height: 260).blur(radius: 70)
+                    .offset(x: drift ? -40 : 20, y: drift ? -220 : -180)
                 LinearGradient(
                     colors: [accent.opacity(colorScheme == .dark ? 0.18 : 0.10), base.opacity(0.42), shade.opacity(colorScheme == .dark ? 0.82 : 0.18)],
                     startPoint: .topLeading,
@@ -222,6 +213,7 @@ struct ArtworkAuroraBackground: View {
             .clipped()
         }
         .ignoresSafeArea()
+        .ew27BackgroundExtension()
         .animation(.easeInOut(duration: 0.8), value: artworkKey)
         .onAppear { beginDrift() }
         .onChange(of: reduceMotion) { _, reduced in if reduced { drift = false } else { beginDrift() } }
@@ -243,25 +235,96 @@ struct GlassPanel<Content: View>: View {
     }
 
     var body: some View {
-        content
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(EW27Design.primaryText.opacity(0.13), lineWidth: 1) }
+        content.liquidGlass(prominent: true)
     }
 }
 
-// SDK-compatible Liquid Glass surface. Standard SwiftUI bars and controls pick up
-// Apple's native treatment automatically on newer OS releases; custom surfaces use
-// this adaptive fallback so the app remains deployable to iOS 17.
-struct LiquidGlassModifier: ViewModifier {
+// MARK: - Liquid Glass surfaces
+//
+// One material language for the whole app. On iOS 26 every surface is a real
+// Apple Liquid Glass layer (it refracts whatever sits behind it); on iOS 17-25
+// the same call sites fall back to a layered material so the layout, spacing
+// and hierarchy stay identical across systems.
+
+/// One typographic scale, so every screen speaks with the same voice.
+enum EW27Type {
+    static let hero = Font.system(size: 23, weight: .bold, design: .rounded)
+    static let title = Font.headline
+    static let row = Font.caption.weight(.semibold)
+    static let body = Font.subheadline
+    static let caption = Font.caption2
+    static let chip = Font.caption2.weight(.semibold)
+    static let numeric = Font.caption.monospacedDigit().weight(.semibold)
+    static let label = Font.caption.weight(.bold)
+}
+
+enum EW27Radius {
+    static let panel: CGFloat = 26
+    static let card: CGFloat = 22
+    static let row: CGFloat = 18
+    static let chip: CGFloat = 14
+}
+
+struct GlassSurfaceModifier<S: Shape>: ViewModifier {
+    var shape: S
     var isProminent = false
+    var tint: Color?
+    var isInteractive = false
+    /// Lets the backdrop show through more strongly. Reserved for surfaces that
+    /// float over artwork, where legibility is not carried by the pane itself.
+    var isTranslucent = false
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    private var cornerRadius: CGFloat { isProminent ? 22 : 18 }
-    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous) }
+    @Environment(\.colorScheme) private var colorScheme
 
     @ViewBuilder
     func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer {
+                content
+                    .glassEffect(glass, in: shape)
+                    .overlay { specular }
+            }
+            .shadow(
+                color: .black.opacity(isProminent ? 0.20 : 0.10),
+                radius: reduceMotion || reduceTransparency ? 0 : (isProminent ? 14 : 8),
+                y: reduceMotion || reduceTransparency ? 0 : (isProminent ? 6 : 3)
+            )
+        } else {
+            fallback(content)
+        }
+    }
+
+    /// The refraction surface. `.clear` lets the artwork read through on the
+    /// floating panes; `.regular` keeps text legible on content panes.
+    @available(iOS 26.0, *)
+    private var glass: Glass {
+        var value: Glass = isTranslucent ? .clear : .regular
+        if let tint { value = value.tint(tint) }
+        if isInteractive { value = value.interactive() }
+        return value
+    }
+
+    /// The specular edge: a bright top rim fading to a faint bottom rim. This is
+    /// what reads as a pane of glass rather than a flat translucent rectangle.
+    private var specular: some View {
+        shape.stroke(
+            LinearGradient(
+                colors: [
+                    .white.opacity(isProminent ? (colorScheme == .dark ? 0.34 : 0.52) : (colorScheme == .dark ? 0.22 : 0.36)),
+                    .white.opacity(isProminent ? (colorScheme == .dark ? 0.06 : 0.14) : 0.04),
+                    .white.opacity(isProminent ? (colorScheme == .dark ? 0.10 : 0.24) : (colorScheme == .dark ? 0.06 : 0.12))
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            ),
+            lineWidth: 0.8
+        )
+        .allowsHitTesting(false)
+    }
+
+    private func fallback(_ content: Content) -> some View {
         content
             .background(
                 reduceTransparency
@@ -269,19 +332,9 @@ struct LiquidGlassModifier: ViewModifier {
                     : (isProminent ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial)),
                 in: shape
             )
-            .overlay {
-                LinearGradient(
-                    colors: [EW27Design.primaryText.opacity(isProminent ? 0.10 : 0.06), .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .clipShape(shape)
-            }
-            .overlay {
-                shape.stroke(EW27Design.primaryText.opacity(isProminent ? 0.18 : 0.11), lineWidth: 1)
-            }
+            .overlay { specular }
             .shadow(
-                color: .black.opacity(isProminent ? 0.18 : 0.10),
+                color: .black.opacity(isProminent ? 0.18 : 0.09),
                 radius: reduceMotion || reduceTransparency ? 0 : (isProminent ? 12 : 7),
                 y: reduceMotion || reduceTransparency ? 0 : (isProminent ? 5 : 3)
             )
@@ -289,7 +342,160 @@ struct LiquidGlassModifier: ViewModifier {
 }
 
 extension View {
-    func liquidGlass(prominent: Bool = false) -> some View {
-        modifier(LiquidGlassModifier(isProminent: prominent))
+    /// A Liquid Glass panel. `prominent` lifts it above the page.
+    func liquidGlass(
+        prominent: Bool = false,
+        tint: Color? = nil,
+        interactive: Bool = false,
+        translucent: Bool = false
+    ) -> some View {
+        modifier(GlassSurfaceModifier(
+            shape: RoundedRectangle(cornerRadius: prominent ? EW27Radius.panel : EW27Radius.card, style: .continuous),
+            isProminent: prominent,
+            tint: tint,
+            isInteractive: interactive,
+            isTranslucent: translucent
+        ))
+    }
+
+    /// A tappable glass list row or card.
+    func glassRow(isSelected: Bool = false, radius: CGFloat = EW27Radius.row) -> some View {
+        modifier(GlassSurfaceModifier(
+            shape: RoundedRectangle(cornerRadius: radius, style: .continuous),
+            tint: isSelected ? EW27Design.accent.opacity(0.24) : nil,
+            isInteractive: true
+        ))
+    }
+
+    /// A glass capsule — filter chips, speed presets, badges.
+    func glassChip(isSelected: Bool = false) -> some View {
+        modifier(GlassSurfaceModifier(
+            shape: Capsule(),
+            tint: isSelected ? EW27Design.accent.opacity(0.32) : nil,
+            isInteractive: true
+        ))
+    }
+
+    /// A glass circle — transport and toolbar buttons.
+    func glassCircle(isActive: Bool = false, tint: Color? = nil) -> some View {
+        modifier(GlassSurfaceModifier(
+            shape: Circle(),
+            tint: tint ?? (isActive ? EW27Design.accent.opacity(0.32) : nil),
+            isInteractive: true
+        ))
+    }
+}
+
+
+private struct BackgroundExtensionModifier: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.backgroundExtensionEffect()
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// Extends the backdrop under adjacent glass bars and the safe area.
+    func ew27BackgroundExtension() -> some View {
+        modifier(BackgroundExtensionModifier())
+    }
+}
+
+/// Reports the top edge of a scroll container's content, so chrome can react
+/// to the scroll direction.
+struct DockScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    func dockScrollTracking() -> some View {
+        background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: DockScrollOffsetKey.self,
+                    value: proxy.frame(in: .named("ew27.dockScroll")).minY
+                )
+            }
+        )
+    }
+}
+
+/// Press feedback for plain glyph buttons: dims and shrinks in place without
+/// moving the hit area.
+struct EW27TransportPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.55 : 1)
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: configuration.isPressed)
+    }
+}
+
+/// Swaps a symbol with a spring morph instead of a hard cut.
+struct EW27SymbolReplace: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content.contentTransition(.symbolEffect(.replace))
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func ew27SymbolReplace() -> some View { modifier(EW27SymbolReplace()) }
+}
+
+/// Play/pause drawn from shapes so the two states spring into each other.
+struct EW27PlayPauseIcon: View {
+    let isPlaying: Bool
+    var size: CGFloat = 20
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var progress: CGFloat { isPlaying ? 1 : 0 }
+
+    var body: some View {
+        ZStack {
+            Image(systemName: "play.fill")
+                .font(.system(size: size, weight: .semibold))
+                .opacity(1 - progress)
+                .scaleEffect(1 - progress * 0.18)
+                .offset(x: progress * size * 0.14)
+            HStack(spacing: max(3, size * 0.17)) {
+                RoundedRectangle(cornerRadius: max(1.5, size * 0.07), style: .continuous)
+                    .frame(width: max(3.5, size * 0.22), height: size * 0.84)
+                RoundedRectangle(cornerRadius: max(1.5, size * 0.07), style: .continuous)
+                    .frame(width: max(3.5, size * 0.22), height: size * 0.84)
+            }
+            .opacity(progress)
+            .scaleEffect(0.8 + progress * 0.2)
+            .offset(x: (1 - progress) * -size * 0.14)
+        }
+        .frame(width: size * 1.3, height: size * 1.3)
+        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.78), value: isPlaying)
+        .accessibilityLabel(isPlaying ? "Pause" : "Play")
+    }
+}
+
+/// Groups neighbouring glass elements so iOS 26 can merge and morph them as one
+/// continuous surface instead of stacking separate sheets of glass.
+struct GlassGroup<Content: View>: View {
+    var spacing: CGFloat = 12
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) { content }
+        } else {
+            content
+        }
     }
 }

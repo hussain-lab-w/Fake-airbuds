@@ -15,6 +15,8 @@ struct ContentView: View {
     @State private var showLyrics = false
     @State private var showPlaybackSettings = false
     @State private var albumArtMotion = false
+    @State private var dockVisible = true
+    @State private var lastScrollOffset: CGFloat = 0
     @AppStorage("ew27.appearance") private var appearanceRawValue = EW27Appearance.system.rawValue
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var playerNamespace
@@ -55,16 +57,33 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
 
-            if player.currentItem != nil && selectedTab != .player {
+            if player.currentItem != nil && selectedTab != .player && dockVisible {
                 miniPlayer
                     .padding(.horizontal, 14)
                     .padding(.top, 7)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            appTabDock
+            if dockVisible {
+                appTabDock
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .onPreferenceChange(DockScrollOffsetKey.self) { offset in
+            defer { lastScrollOffset = offset }
+            guard selectedTab != .player, !showLyrics else { return }
+            let delta = offset - lastScrollOffset
+            guard abs(delta) > 6 else { return }
+            let shouldShow = delta > 0
+            guard shouldShow != dockVisible else { return }
+            withAnimation(reduceMotion ? nil : Motion.snappy) { dockVisible = shouldShow }
         }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
-        .sheet(isPresented: $showQueue) { QueueView(player: player) }
+        .sheet(isPresented: $showQueue) {
+            QueueView(player: player)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(EW27Radius.panel)
+        }
         .preferredColorScheme(EW27Appearance(rawValue: appearanceRawValue)?.colorScheme)
         .tint(EW27Design.accent)
         .sensoryFeedback(.selection, trigger: selectedTab)
@@ -73,6 +92,11 @@ struct ContentView: View {
             if reduced { albumArtMotion = false } else { startAlbumArtMotion() }
         }
         .animation(reduceMotion ? nil : Motion.crossfade, value: selectedTab)
+        .onChange(of: selectedTab) { _, _ in
+            if !dockVisible {
+                withAnimation(reduceMotion ? nil : Motion.snappy) { dockVisible = true }
+            }
+        }
     }
 
     private var appTabDock: some View {
@@ -108,10 +132,10 @@ struct ContentView: View {
             }
         }
         .padding(7)
+        .liquidGlass(prominent: true, translucent: true)
         .padding(.horizontal, 18)
         .padding(.top, 8)
         .padding(.bottom, 6)
-        .background(.clear)
     }
 
     private func startAlbumArtMotion() {
@@ -151,14 +175,14 @@ struct ContentView: View {
     }
 
     private var lyricsAnimation: Animation {
-        reduceMotion ? .linear(duration: 0.01) : Motion.sheet
+        reduceMotion ? .linear(duration: 0.01) : .spring(response: 0.46, dampingFraction: 0.9)
     }
 
     private func lyricsTransition(edge: Edge) -> AnyTransition {
         guard !reduceMotion else { return .opacity }
         return .asymmetric(
-            insertion: .opacity.combined(with: .scale(scale: 0.985)).combined(with: .move(edge: edge)),
-            removal: .opacity.combined(with: .scale(scale: 1.015)).combined(with: .move(edge: edge))
+            insertion: .opacity.combined(with: .scale(scale: 0.975)),
+            removal: .opacity.combined(with: .scale(scale: 1.02))
         )
     }
 
@@ -179,7 +203,11 @@ struct ContentView: View {
             }
             .navigationTitle("Library")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Title, artist, or album")
+            .searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Title, artist, or album"
+            )
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Menu {
@@ -230,8 +258,7 @@ struct ContentView: View {
             .foregroundStyle(isSelected ? Color.black : EW27Design.primaryText.opacity(0.68))
             .frame(maxWidth: .infinity)
             .frame(height: 38)
-            .background(isSelected ? Color.cyan : EW27Design.primaryText.opacity(0.07), in: Capsule())
-            .overlay(Capsule().stroke(isSelected ? Color.cyan.opacity(0.8) : EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+            .glassChip(isSelected: isSelected)
         }
         .buttonStyle(MusicPressStyle())
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -252,11 +279,11 @@ struct ContentView: View {
                 .padding(.bottom, 92)
             }
             .background { ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint) }
+            .coordinateSpace(name: "ew27.dockScroll")
+            .dockScrollTracking()
             .scrollBounceBehavior(.basedOnSize)
             .buttonStyle(MusicPressStyle())
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .navigationTitle("Studio")
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -266,6 +293,8 @@ struct ContentView: View {
             List { content() }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .coordinateSpace(name: "ew27.dockScroll")
+            .dockScrollTracking()
             .background {
                 ArtworkAuroraBackground(image: player.currentArtwork, tint: player.artworkTint)
             }
@@ -273,8 +302,6 @@ struct ContentView: View {
             .listRowSeparator(.hidden)
             .tint(Color(red: 0.38, green: 0.78, blue: 1))
             .buttonStyle(MusicPressStyle())
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
     }
 
     private var libraryOverviewSection: some View {
@@ -284,7 +311,7 @@ struct ContentView: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(.cyan)
                     .frame(width: 52, height: 52)
-                    .background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .glassRow(radius: 16)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("YOUR COLLECTION").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
                     Text("\(library.allSongs.count) songs · \(library.playlists.count) playlists")
@@ -294,7 +321,7 @@ struct ContentView: View {
                 Image(systemName: "waveform").font(.system(size: 19, weight: .medium)).foregroundStyle(EW27Design.primaryText.opacity(0.4))
             }
             .padding(16)
-            .liquidGlass(prominent: false)
+            .liquidGlass()
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -340,7 +367,7 @@ struct ContentView: View {
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(.cyan)
                         .frame(width: 52, height: 52)
-                        .background(.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .glassRow(radius: 16)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("SOUND STUDIO").font(.caption2.weight(.bold)).tracking(1.5).foregroundStyle(.cyan)
                         Text(player.selectedPreset.rawValue)
@@ -358,7 +385,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
-            .liquidGlass(prominent: false)
+            .liquidGlass()
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -372,7 +399,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .liquidGlass(prominent: false)
+        .liquidGlass()
     }
 
     private func studioMetric(icon: String, title: String, value: String) -> some View {
@@ -400,7 +427,28 @@ struct ContentView: View {
             .lineLimit(1)
             .padding(.horizontal, 10)
             .frame(height: 28)
-            .background(EW27Design.primaryText.opacity(0.06), in: Capsule())
+            .glassChip()
+    }
+
+    /// A restrained tint borrowed from the current artwork, so glass surfaces
+    /// pick up the album's colour the way Apple Music's do.
+    private var artworkGlassTint: Color? {
+        guard let tint = player.artworkTint else { return nil }
+        return Color(uiColor: tint).opacity(0.28)
+    }
+
+    /// The lyric line currently being sung, mirroring the lyrics reader's
+    /// clock and sync offset.
+    private func miniSubtitle(at date: Date) -> String {
+        let fallback = player.currentItem?.artist ?? "EW27 Player"
+        guard let lyrics = player.lyricsStore.lyrics, lyrics.isSynced else { return fallback }
+        let time = player.lyricPlaybackTime(at: date) + player.lyricsStore.syncOffset
+        var current: String?
+        for line in lyrics.lines {
+            if line.start <= time { current = line.plainText } else { break }
+        }
+        guard let current, !current.isEmpty else { return fallback }
+        return current
     }
 
     private var miniPlayer: some View {
@@ -421,23 +469,28 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(player.currentItem?.title ?? "No track selected")
-                    .font(.caption.weight(.semibold))
+                    .font(EW27Type.row)
                     .lineLimit(1)
-                Text(player.currentItem?.artist ?? "EW27 Player")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                // Shows the line being sung right now when lyrics are synced;
+                // falls back to the artist otherwise.
+                TimelineView(.periodic(from: .now, by: 0.4)) { timeline in
+                    Text(miniSubtitle(at: timeline.date))
+                        .font(EW27Type.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .contentTransition(.opacity)
+                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: miniSubtitle(at: timeline.date))
+                }
                 if let remaining = player.sleepRemaining {
                     Text(String(format: "Sleep %.0fs", remaining)).font(.caption2).foregroundStyle(.cyan)
                 }
             }
             Spacer(minLength: 4)
             Button { haptic(); player.togglePlayPause() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 15, weight: .bold))
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(Color.cyan))
-                    .foregroundStyle(.black)
+                EW27PlayPauseIcon(isPlaying: player.isPlaying, size: 14)
+                    .foregroundStyle(EW27Design.primaryText)
+                    .frame(width: 38, height: 38)
+                    .glassCircle(tint: EW27Design.cyan.opacity(0.30))
             }
             .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
             .buttonStyle(MusicPressStyle())
@@ -451,6 +504,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .liquidGlass(prominent: true, tint: artworkGlassTint, interactive: true, translucent: true)
         .overlay(alignment: .bottom) {
             MiniProgressLine(clock: player.clock)
             .padding(.horizontal, 14)
@@ -460,48 +514,113 @@ struct ContentView: View {
         .onTapGesture { selectedTab = .player; setLyricsVisible(false) }
     }
 
-    @ViewBuilder
-    private var playerArtwork: some View {
-        if vinylMode {
-            VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
-        } else if let artwork = player.currentArtwork {
-            Image(uiImage: artwork).resizable().scaledToFill().clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        } else {
-            ZStack {
-                LinearGradient(colors: [Color.cyan.opacity(0.75), Color.blue.opacity(0.38), Color.purple.opacity(0.65)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                Image(systemName: "waveform").font(.system(size: 38, weight: .medium)).foregroundStyle(EW27Design.primaryText.opacity(0.92))
-            }.clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-    }
-
     private var playerSection: some View {
         GeometryReader { proxy in
             if player.currentItem == nil {
                 coldStartState
                     .frame(width: proxy.size.width, height: proxy.size.height)
             } else {
-                let artworkSize = min(proxy.size.width - 36, max(190, proxy.size.height * 0.49))
-                VStack(alignment: .leading, spacing: 10) {
-                    deckHeader
-                    deckArtwork
-                        .frame(width: artworkSize, height: artworkSize)
-                        .frame(maxWidth: .infinity)
-                    deckIdentity
-                    playerSignalChips
-                    deckProgress
-                    deckTransport
-                    if let message = player.playbackMessage {
-                        Label(message, systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
+                // Apple Music proportions: header, large cover, then the controls
+                // docked in the lower third over the artwork's own blur.
+                let coverSide = max(190, min(proxy.size.width - 44, proxy.size.height * 0.46))
+                ZStack {
+                    playerBackdrop(size: proxy.size)
+
+                    VStack(spacing: 0) {
+                        deckHeader
+                            .padding(.horizontal, 20)
+                            .padding(.top, 4)
+                        Spacer(minLength: 10)
+                        coverView(side: coverSide)
+                        Spacer(minLength: 10)
+                        VStack(spacing: 12) {
+                            deckIdentity
+                            playerSignalChips
+                            deckProgress
+                            deckTransport
+                                .padding(.top, 2)
+                            deckActionRow
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
                     }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 8)
-                .padding(.bottom, 10)
-                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+                .environment(\.colorScheme, .dark)
             }
         }
+        .ignoresSafeArea(edges: .horizontal)
+    }
+
+    /// The artwork itself, blurred, filling the whole player. No flat base colour
+    /// underneath, so the screen never shows an empty black band.
+    private func playerBackdrop(size: CGSize) -> some View {
+        ZStack {
+            Color.black
+            if let artwork = player.currentArtwork {
+                Image(uiImage: artwork)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size.width, height: size.height)
+                    .blur(radius: 64)
+                    .scaleEffect(1.35)
+                    .opacity(0.95)
+                    .clipped()
+            }
+            LinearGradient(
+                colors: [.black.opacity(0.45), .black.opacity(0.12), .black.opacity(0.30), .black.opacity(0.72)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .frame(width: size.width, height: size.height)
+        .clipped()
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    /// The cover keeps its true aspect ratio, inside a square frame.
+    private func coverView(side: CGFloat) -> some View {
+        Group {
+            if vinylMode {
+                VinylView(image: player.currentArtwork, isPlaying: player.isPlaying, speed: player.speed)
+            } else if let artwork = player.currentArtwork {
+                Image(uiImage: artwork)
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: .black.opacity(0.42), radius: 30, y: 14)
+            } else {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(.white.opacity(0.08))
+                    .overlay {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 46, weight: .light))
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+            }
+        }
+        .frame(width: side, height: side)
+        .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.012 : 1)
+        .id(player.currentItem?.persistentID)
+        .transition(.opacity)
+        .animation(reduceMotion ? nil : Motion.crossfade, value: player.currentItem?.persistentID)
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            guard let item = player.currentItem else { return }
+            haptic()
+            favorites.toggle(item)
+        }
+        .gesture(
+            DragGesture(minimumDistance: 28)
+                .onEnded { value in
+                    guard abs(value.translation.width) > 62,
+                          abs(value.translation.width) > abs(value.translation.height) else { return }
+                    haptic()
+                    if value.translation.width < 0 { player.nextTrack() } else { player.previousTrack() }
+                }
+        )
+        .accessibilityHint("Swipe left or right to change tracks. Double tap to favorite.")
     }
 
     private var coldStartState: some View {
@@ -538,9 +657,7 @@ struct ContentView: View {
         }
         .padding(28)
         .frame(maxWidth: 340)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(EW27Design.primaryText.opacity(0.14), lineWidth: 1))
-        .shadow(color: .black.opacity(0.28), radius: 24, y: 12)
+        .liquidGlass(prominent: true)
     }
 
     private var deckHeader: some View {
@@ -548,13 +665,13 @@ struct ContentView: View {
             Text("NOW PLAYING")
                 .font(.caption2.weight(.bold))
                 .tracking(1.6)
-                .foregroundStyle(EW27Design.primaryText.opacity(0.48))
+                .foregroundStyle(EW27Design.primaryText.opacity(0.64))
             Spacer(minLength: 0)
             HStack(spacing: 5) {
                 Image(systemName: "airplay.audio").font(.caption2)
                 Text(player.routeName).font(.caption2.weight(.medium)).lineLimit(1).minimumScaleFactor(0.75)
             }
-            .foregroundStyle(EW27Design.primaryText.opacity(0.48))
+            .foregroundStyle(EW27Design.primaryText.opacity(0.64))
             Menu {
                 Toggle("Vinyl artwork", isOn: $vinylMode)
                 Toggle("Keep pitch", isOn: Binding(get: { player.keepPitch }, set: { player.keepPitch = $0; player.setSpeed(player.speed) }))
@@ -565,114 +682,53 @@ struct ContentView: View {
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(EW27Design.primaryText.opacity(0.82))
-                    .frame(width: 42, height: 42)
-                    .background(EW27Design.primaryText.opacity(0.075), in: Circle())
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(EW27Design.primaryText.opacity(0.85))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel("Playback options")
         }
     }
 
-    private var deckArtwork: some View {
-        playerArtwork
-            .frame(maxWidth: 350)
-            .aspectRatio(1, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(EW27Design.primaryText.opacity(0.16), lineWidth: 1))
-            .shadow(color: (Color(uiColor: player.artworkTint ?? .systemBlue)).opacity(0.20), radius: 32, y: 16)
-            .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.025 : 1)
-            .rotation3DEffect(.degrees(!reduceMotion && player.isPlaying && albumArtMotion ? 1.5 : 0), axis: (x: 0, y: 1, z: 0))
-            .id(player.currentItem?.persistentID)
-            .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            .animation(reduceMotion ? nil : Motion.sheet, value: player.currentItem?.persistentID)
-            .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(alignment: .topTrailing) { artworkActionRail }
-            .matchedGeometryEffect(id: "player-artwork", in: playerNamespace)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 28)
-                    .onEnded { value in
-                        guard abs(value.translation.width) > 62,
-                              abs(value.translation.width) > abs(value.translation.height) else { return }
-                        haptic()
-                        if value.translation.width < 0 { player.nextTrack() } else { player.previousTrack() }
-                    }
-            )
-            .simultaneousGesture(
-                TapGesture(count: 2)
-                    .onEnded {
-                        guard let item = player.currentItem else { return }
-                        haptic()
-                        favorites.toggle(item)
-                    }
-            )
-            .accessibilityHint("Swipe left or right to change tracks. Double tap to favorite.")
-    }
-
     private var playerSignalChips: some View {
-        HStack(spacing: 7) {
-            signalChip(icon: "waveform", text: player.selectedPreset.rawValue)
-            signalChip(icon: "speedometer", text: String(format: "%.2fx", player.speed))
-            if player.lyricsStore.lyrics != nil {
-                signalChip(icon: "quote.bubble.fill", text: "Lyrics")
+        GlassGroup(spacing: 8) {
+            HStack(spacing: 7) {
+                signalChip(icon: "waveform", text: player.selectedPreset.rawValue)
+                signalChip(icon: "speedometer", text: String(format: "%.2fx", player.speed))
+                if player.lyricsStore.lyrics != nil {
+                    signalChip(icon: "quote.bubble.fill", text: "Lyrics")
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
         .padding(.top, 1)
     }
 
     private func signalChip(icon: String, text: String) -> some View {
         Label(text, systemImage: icon)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(EW27Design.primaryText.opacity(0.72))
+            .font(EW27Type.chip)
+            .foregroundStyle(EW27Design.primaryText.opacity(0.62))
             .padding(.horizontal, 9)
-            .frame(height: 28)
-            .background(EW27Design.primaryText.opacity(0.07), in: Capsule())
-            .overlay(Capsule().stroke(EW27Design.primaryText.opacity(0.10), lineWidth: 1))
+            .frame(height: 26)
+            .glassChip()
     }
 
-    private var artworkActionRail: some View {
-        VStack(spacing: 8) {
-            artworkIconButton("quote.bubble.fill", label: "Lyrics", active: showLyrics) {
-                setLyricsVisible(true)
-            }
-            artworkIconButton("list.bullet", label: "Queue", active: false) {
-                showQueue = true
-            }
-            artworkIconButton("shuffle", label: "Shuffle", active: player.shuffleEnabled) {
-                player.shuffleEnabled.toggle()
-            }
-        }
-        .padding(12)
-    }
-
-    private func artworkIconButton(_ icon: String, label: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(active ? Color.black : EW27Design.primaryText)
-                .frame(width: 34, height: 34)
-                .background(active ? Color.cyan : Color.black.opacity(0.46), in: Circle())
-                .overlay(Circle().stroke(EW27Design.primaryText.opacity(active ? 0.4 : 0.2), lineWidth: 1))
-        }
-        .buttonStyle(MusicPressStyle())
-        .accessibilityLabel(label)
-    }
 
     private var deckIdentity: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(player.currentItem?.title ?? "Nothing playing")
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
+                    .font(EW27Type.hero)
                     .foregroundStyle(EW27Design.primaryText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
                 Text(player.currentItem?.artist ?? "Choose a track in your library")
-                    .font(.subheadline)
+                    .font(EW27Type.body)
                     .foregroundStyle(EW27Design.primaryText.opacity(0.60))
                     .lineLimit(1)
                 Text(player.audioQualityLabel)
-                    .font(.caption2.weight(.medium))
+                    .font(EW27Type.caption.weight(.medium))
                     .foregroundStyle(EW27Design.primaryText.opacity(0.40))
                     .lineLimit(1)
             }
@@ -680,19 +736,17 @@ struct ContentView: View {
             if let item = player.currentItem {
                 let isFavorite = favorites.contains(item)
                 Button { favorites.toggle(item) } label: {
-                    Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 21, weight: .medium))
-                        .foregroundStyle(isFavorite ? Color.pink : EW27Design.primaryText.opacity(0.72))
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(isFavorite ? Color.yellow : EW27Design.primaryText.opacity(0.72))
                         .frame(width: 48, height: 48)
-                        .contentShape(Circle())
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(MusicPressStyle())
+                .buttonStyle(EW27TransportPressStyle())
                 .accessibilityLabel(isFavorite ? "Remove Favorite" : "Add to Favorites")
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-
+        .padding(.horizontal, 2)
     }
 
     private var deckProgress: some View {
@@ -704,23 +758,70 @@ struct ContentView: View {
         .padding(.horizontal, 2)
     }
 
-    private var deckTransport: some View {
-        HStack(spacing: 32) {
-            playerActionButton("backward.end.fill", label: "Previous track", size: 21) { player.previousTrack() }
-            Button { haptic(); player.togglePlayPause() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 25, weight: .bold))
-                    .foregroundStyle(Color(red: 0.03, green: 0.07, blue: 0.11))
-                    .offset(x: player.isPlaying ? 0 : 2)
-                    .frame(width: 72, height: 72)
-                    .background(Circle().fill(Color.cyan.gradient))
-                    .shadow(color: .cyan.opacity(0.24), radius: 18, y: 7)
+    /// Bottom action row, mirroring Apple Music's lyrics / queue / shuffle strip.
+    private var deckActionRow: some View {
+        HStack(spacing: 0) {
+            actionButton("quote.bubble", label: "Lyrics", active: showLyrics) {
+                setLyricsVisible(true)
             }
-            .buttonStyle(MusicPressStyle())
+            .disabled(player.currentItem == nil)
+            Spacer(minLength: 0)
+            actionButton("list.bullet", label: "Queue", active: false) {
+                showQueue = true
+            }
+            Spacer(minLength: 0)
+            actionButton("shuffle", label: "Shuffle", active: player.shuffleEnabled) {
+                player.shuffleEnabled.toggle()
+            }
+        }
+        .padding(.horizontal, 30)
+    }
+
+    private func actionButton(_ symbol: String, label: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 19, weight: .medium))
+                .foregroundStyle(active ? EW27Design.cyan : EW27Design.primaryText.opacity(0.78))
+                .frame(width: 48, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(EW27TransportPressStyle())
+        .accessibilityLabel(label)
+    }
+
+    private var deckTransport: some View {
+        HStack(spacing: 44) {
+            transportButton("backward.fill", label: "Previous track", size: 30) {
+                haptic()
+                player.previousTrack()
+            }
+            Button { haptic(); player.togglePlayPause() } label: {
+                EW27PlayPauseIcon(isPlaying: player.isPlaying, size: 42)
+                    .foregroundStyle(EW27Design.primaryText)
+                    .frame(width: 64, height: 64)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(EW27TransportPressStyle())
             .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
-            playerActionButton("forward.end.fill", label: "Next track", size: 21) { haptic(); player.nextTrack() }
+            transportButton("forward.fill", label: "Next track", size: 30) {
+                haptic()
+                player.nextTrack()
+            }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Plain glyph button with a generous, predictable hit area.
+    private func transportButton(_ symbol: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(EW27Design.primaryText)
+                .frame(width: 56, height: 56)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(EW27TransportPressStyle())
+        .accessibilityLabel(label)
     }
 
     private var deckShortcuts: some View {
@@ -746,7 +847,7 @@ struct ContentView: View {
                             .foregroundStyle(abs(player.speed - value) < 0.02 ? Color.black : EW27Design.primaryText.opacity(0.76))
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
-                            .background(abs(player.speed - value) < 0.02 ? Color.cyan : EW27Design.primaryText.opacity(0.07), in: Capsule())
+                            .glassChip(isSelected: abs(player.speed - value) < 0.02)
                     }
                 }
                 PlaybackControlsView(player: player, clock: player.clock, speedState: player.speedState, spectrum: player.spectrumModel, waveform: player.waveformStore)
@@ -765,8 +866,7 @@ struct ContentView: View {
         .tint(.cyan)
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+        .liquidGlass()
     }
 
     private func deckActionButton(_ title: String, icon: String, isActive: Bool, action: @escaping () -> Void) -> some View {
@@ -784,11 +884,11 @@ struct ContentView: View {
 
     private func playerActionButton(_ symbol: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-                Image(systemName: symbol)
-                    .font(.system(size: size, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 48)
-                .background(.thinMaterial, in: Circle())
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(EW27Design.primaryText)
+                .frame(width: 54, height: 54)
+                .glassCircle()
         }
         .buttonStyle(MusicPressStyle())
         .accessibilityLabel(label)
@@ -929,7 +1029,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(isCurrent ? Color.cyan.opacity(0.075) : EW27Design.primaryText.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassRow(isSelected: isCurrent, radius: 16)
         }
         .buttonStyle(MusicPressStyle())
         .listRowInsets(EdgeInsets(top: 3, leading: 14, bottom: 3, trailing: 14))
@@ -1006,14 +1106,26 @@ private struct SlimPlaybackProgressBar: View {
             let progress = min(1, max(0, scrubFraction ?? current))
             let width = max(0, geometry.size.width)
 
+            let knob: CGFloat = scrubFraction == nil ? 11 : 15
             ZStack(alignment: .leading) {
-                Capsule().fill(EW27Design.primaryText.opacity(0.24)).frame(height: 4)
-                Capsule().fill(.cyan).frame(width: width * CGFloat(progress), height: 4)
+                Capsule(style: .continuous)
+                    .fill(.white.opacity(0.30))
+                    .frame(height: 6)
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [EW27Design.cyan, .white.opacity(0.92)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: width * CGFloat(progress), height: 6)
                 Circle()
-                    .fill(EW27Design.primaryText)
-                    .frame(width: 10, height: 10)
-                    .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
-                    .offset(x: max(0, width * CGFloat(progress) - 5))
+                    .fill(.white)
+                    .frame(width: knob, height: knob)
+                    .shadow(color: .black.opacity(0.28), radius: 4, y: 1)
+                    .offset(x: max(0, width * CGFloat(progress) - knob / 2))
+                    .animation(.spring(response: 0.24, dampingFraction: 0.8), value: scrubFraction == nil)
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
@@ -1031,7 +1143,6 @@ private struct SlimPlaybackProgressBar: View {
             .accessibilityElement()
             .accessibilityLabel("Playback progress")
             .accessibilityValue(String(format: "%.0f percent", progress * 100))
-
         }
     }
 }

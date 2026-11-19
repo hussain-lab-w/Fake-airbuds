@@ -445,7 +445,7 @@ struct AudioEffectsSection: View {
                             .foregroundStyle(selected ? Color.black : EW27Design.primaryText.opacity(0.76))
                             .padding(.horizontal, 12)
                             .frame(height: 36)
-                            .background(selected ? Color.cyan : EW27Design.primaryText.opacity(0.07), in: Capsule())
+                            .glassChip(isSelected: selected)
                             .overlay(Capsule().stroke(selected ? Color.cyan.opacity(0.9) : EW27Design.primaryText.opacity(0.08), lineWidth: 1))
                         }
                         .buttonStyle(MusicPressStyle())
@@ -481,7 +481,7 @@ struct AudioEffectsSection: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(EW27Design.cyan)
                 .frame(width: 28, height: 28)
-                .background(EW27Design.cyan.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .glassRow(radius: 9)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(EW27Design.primaryText)
                 Text(detail).font(.caption2).foregroundStyle(EW27Design.primaryText.opacity(0.42))
@@ -502,7 +502,7 @@ struct AudioEffectsSection: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(EW27Design.primaryText.opacity(0.48))
                     .frame(width: 30, height: 30)
-                    .background(EW27Design.primaryText.opacity(0.06), in: Circle())
+                    .glassCircle()
             }
             .contentShape(Rectangle())
         }

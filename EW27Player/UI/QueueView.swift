@@ -59,7 +59,7 @@ struct QueueView: View {
                             Button {
                                 model.clearUpcoming()
                             } label: {
-                                Image(systemName: "xmark.circle")
+                                Image(systemName: "text.line.last.and.arrowtriangle.forward")
                             }
                             .accessibilityLabel("Clear upcoming tracks")
                             .accessibilityHint("Keeps the currently playing track")
@@ -187,7 +187,7 @@ private struct QueueRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 11)
-            .background(isCurrent ? Color.cyan.opacity(0.10) : EW27Design.primaryText.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .glassRow(isSelected: isCurrent)
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(isCurrent ? Color.cyan.opacity(0.28) : EW27Design.primaryText.opacity(0.07), lineWidth: 1)
