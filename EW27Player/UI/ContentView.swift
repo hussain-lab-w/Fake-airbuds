@@ -108,7 +108,6 @@ struct ContentView: View {
             }
         }
         .padding(7)
-        .liquidGlass(prominent: true)
         .padding(.horizontal, 18)
         .padding(.top, 8)
         .padding(.bottom, 6)
@@ -295,8 +294,7 @@ struct ContentView: View {
                 Image(systemName: "waveform").font(.system(size: 19, weight: .medium)).foregroundStyle(EW27Design.primaryText.opacity(0.4))
             }
             .padding(16)
-            .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+            .liquidGlass(prominent: false)
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -360,8 +358,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
-            .background(EW27Design.primaryText.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(EW27Design.primaryText.opacity(0.09), lineWidth: 1))
+            .liquidGlass(prominent: false)
             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
             .listRowBackground(Color.clear)
         }
@@ -375,8 +372,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(EW27Design.primaryText.opacity(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(EW27Design.primaryText.opacity(0.08), lineWidth: 1))
+        .liquidGlass(prominent: false)
     }
 
     private func studioMetric(icon: String, title: String, value: String) -> some View {
@@ -455,7 +451,6 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .liquidGlass(prominent: true)
         .overlay(alignment: .bottom) {
             MiniProgressLine(clock: player.clock)
             .padding(.horizontal, 14)
@@ -697,7 +692,6 @@ struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .liquidGlass(prominent: false)
 
     }
 
@@ -1037,7 +1031,6 @@ private struct SlimPlaybackProgressBar: View {
             .accessibilityElement()
             .accessibilityLabel("Playback progress")
             .accessibilityValue(String(format: "%.0f percent", progress * 100))
-            .liquidGlass(prominent: true)
 
         }
     }
