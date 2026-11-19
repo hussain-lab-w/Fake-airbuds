@@ -601,6 +601,7 @@ struct ContentView: View {
             }
         }
         .frame(width: side, height: side)
+        .drawingGroup()
         .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.012 : 1)
         .id(player.currentItem?.persistentID)
         .transition(.opacity)

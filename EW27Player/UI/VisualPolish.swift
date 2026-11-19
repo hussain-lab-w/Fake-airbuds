@@ -195,13 +195,15 @@ struct ArtworkAuroraBackground: View {
                         .blur(radius: 38)
                         .opacity(colorScheme == .dark ? 0.55 : 0.42)
                         .transition(.opacity)
-                        .id(artworkKey)
                 }
                 Circle().fill(accent.opacity(colorScheme == .dark ? 0.42 : 0.26)).frame(width: 340, height: 340).blur(radius: 84)
+                    .allowsHitTesting(false)
                     .offset(x: drift ? 112 : 64, y: drift ? -152 : -114)
                 Circle().fill(accent.opacity(colorScheme == .dark ? 0.26 : 0.18)).frame(width: 300, height: 300).blur(radius: 90)
+                    .allowsHitTesting(false)
                     .offset(x: drift ? -100 : -60, y: drift ? 192 : 144)
                 Ellipse().fill(shade.opacity(colorScheme == .dark ? 0.10 : 0.30)).frame(width: 420, height: 260).blur(radius: 70)
+                    .allowsHitTesting(false)
                     .offset(x: drift ? -40 : 20, y: drift ? -220 : -180)
                 LinearGradient(
                     colors: [accent.opacity(colorScheme == .dark ? 0.18 : 0.10), base.opacity(0.42), shade.opacity(colorScheme == .dark ? 0.82 : 0.18)],
@@ -211,6 +213,7 @@ struct ArtworkAuroraBackground: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
             .clipped()
+            .drawingGroup()
         }
         .ignoresSafeArea()
         .ew27BackgroundExtension()
