@@ -41,9 +41,9 @@ struct RouteAccessoryCard: View {
     private func showRoute(_ name: String) {
         guard !name.isEmpty, name != AudioPlayer.noRoute, name != displayedRoute else { return }
         displayedRoute = name
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) { visible = true }
+        withAnimation(Motion.transition) { visible = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-            withAnimation(.easeOut(duration: 0.3)) { visible = false }
+            withAnimation(Motion.crossfade) { visible = false }
         }
         guard UIApplication.shared.applicationState != .active else { return }
         let center = UNUserNotificationCenter.current()

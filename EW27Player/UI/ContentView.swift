@@ -75,7 +75,7 @@ struct ContentView: View {
             guard abs(delta) > 6 else { return }
             let shouldShow = delta > 0
             guard shouldShow != dockVisible else { return }
-            withAnimation(reduceMotion ? nil : Motion.snappy) { dockVisible = shouldShow }
+            withAnimation(reduceMotion ? nil : Motion.microInteraction) { dockVisible = shouldShow }
         }
         .overlay(alignment: .top) { RouteAccessoryCard(routeName: player.routeName) }
         .sheet(isPresented: $showQueue) {
@@ -94,7 +94,7 @@ struct ContentView: View {
         .animation(reduceMotion ? nil : Motion.crossfade, value: selectedTab)
         .onChange(of: selectedTab) { _, _ in
             if !dockVisible {
-                withAnimation(reduceMotion ? nil : Motion.snappy) { dockVisible = true }
+                withAnimation(reduceMotion ? nil : Motion.microInteraction) { dockVisible = true }
             }
         }
     }
@@ -104,7 +104,7 @@ struct ContentView: View {
             ForEach(AppTab.allCases, id: \.self) { item in
                 let selected = selectedTab == item
                 Button {
-                    withAnimation(reduceMotion ? nil : Motion.snappy) { selectedTab = item }
+                    withAnimation(reduceMotion ? nil : Motion.microInteraction) { selectedTab = item }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: item.icon)
@@ -157,7 +157,7 @@ struct ContentView: View {
                     .transition(lyricsTransition(edge: .leading))
                 }
             }
-            .animation(lyricsAnimation, value: showLyrics)
+            .animation(Motion.transition, value: showLyrics)
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showPlaybackSettings) {
                 NavigationStack {
@@ -174,10 +174,6 @@ struct ContentView: View {
         }
     }
 
-    private var lyricsAnimation: Animation {
-        reduceMotion ? .linear(duration: 0.01) : .spring(response: 0.46, dampingFraction: 0.9)
-    }
-
     private func lyricsTransition(edge: Edge) -> AnyTransition {
         guard !reduceMotion else { return .opacity }
         return .asymmetric(
@@ -187,7 +183,7 @@ struct ContentView: View {
     }
 
     private func setLyricsVisible(_ visible: Bool) {
-        withAnimation(lyricsAnimation) {
+        withAnimation(Motion.transition) {
             showLyrics = visible
         }
     }
@@ -479,7 +475,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .contentTransition(.opacity)
-                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: miniSubtitle(at: timeline.date))
+                        .animation(reduceMotion ? nil : Motion.crossfade, value: miniSubtitle(at: timeline.date))
                 }
                 if let remaining = player.sleepRemaining {
                     Text(String(format: "Sleep %.0fs", remaining)).font(.caption2).foregroundStyle(.cyan)
@@ -645,7 +641,7 @@ struct ContentView: View {
             }
             Button {
                 haptic()
-                withAnimation(reduceMotion ? nil : Motion.sheet) { selectedTab = .library }
+                withAnimation(reduceMotion ? nil : Motion.transition) { selectedTab = .library }
             } label: {
                 Label("Browse library", systemImage: "music.note.list")
                     .font(.subheadline.weight(.bold))
@@ -1127,7 +1123,7 @@ private struct SlimPlaybackProgressBar: View {
                     .frame(width: knob, height: knob)
                     .shadow(color: .black.opacity(0.28), radius: 4, y: 1)
                     .offset(x: max(0, width * CGFloat(progress) - knob / 2))
-                    .animation(.spring(response: 0.24, dampingFraction: 0.8), value: scrubFraction == nil)
+                    .animation(Motion.microInteraction, value: scrubFraction == nil)
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())

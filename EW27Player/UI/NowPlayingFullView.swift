@@ -27,7 +27,7 @@ struct NowPlayingFullView: View {
                      Text("Now Playing").font(.headline)
                         Spacer()
                         Button {
-                            withAnimation(.easeInOut(duration: 0.3)) { showLyrics.toggle() }
+                            withAnimation(Motion.crossfade) { showLyrics.toggle() }
                         } label: {
                             Image(systemName: showLyrics ? "photo" : "quote.bubble")
                                 .font(.system(size: 15, weight: .semibold))
@@ -115,7 +115,7 @@ struct NowPlayingFullView: View {
         .rotation3DEffect(.degrees(!reduceMotion && player.isPlaying && artworkMotion ? 1.5 : 0), axis: (x: 0, y: 1, z: 0))
         .id(player.currentItem?.persistentID)
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
-        .animation(.spring(response: 0.55, dampingFraction: 0.78), value: player.currentItem?.persistentID)
+        .animation(Motion.transition, value: player.currentItem?.persistentID)
         .onTapGesture(count: 2) { player.togglePlayPause() }
     }
 

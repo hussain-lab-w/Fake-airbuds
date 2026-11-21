@@ -2,9 +2,10 @@ import SwiftUI
 import UIKit
 
 enum Motion {
-    static let snappy = Animation.snappy(duration: 0.2)
-    static let sheet = Animation.spring(response: 0.4, dampingFraction: 0.85)
-    static let crossfade = Animation.easeInOut(duration: 0.3)
+    static let microInteraction = Animation.spring(response: 0.28, dampingFraction: 0.86)   // taps, toggles, selection
+    static let transition = Animation.spring(response: 0.42, dampingFraction: 0.84)          // sheets, screen/tab changes, expand/collapse
+    static let drag = Animation.interactiveSpring(response: 0.3, dampingFraction: 0.82, blendDuration: 0.1) // anything tracking a gesture
+    static let crossfade = Animation.easeInOut(duration: 0.25)                                // opacity/color only
 }
 
 enum EW27Appearance: String, CaseIterable, Identifiable {
@@ -46,7 +47,7 @@ struct MusicPressStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.965 : 1)
             .opacity(configuration.isPressed ? 0.82 : 1)
-            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.68), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : Motion.microInteraction, value: configuration.isPressed)
     }
 }
 
@@ -217,7 +218,7 @@ struct ArtworkAuroraBackground: View {
         }
         .ignoresSafeArea()
         .ew27BackgroundExtension()
-        .animation(.easeInOut(duration: 0.8), value: artworkKey)
+        .animation(Motion.crossfade, value: artworkKey)
         .onAppear { beginDrift() }
         .onChange(of: reduceMotion) { _, reduced in if reduced { drift = false } else { beginDrift() } }
     }
@@ -437,7 +438,7 @@ struct EW27TransportPressStyle: ButtonStyle {
         configuration.label
             .opacity(configuration.isPressed ? 0.55 : 1)
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: configuration.isPressed)
+            .animation(Motion.microInteraction, value: configuration.isPressed)
     }
 }
 
@@ -483,7 +484,7 @@ struct EW27PlayPauseIcon: View {
             .offset(x: (1 - progress) * -size * 0.14)
         }
         .frame(width: size * 1.3, height: size * 1.3)
-        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.78), value: isPlaying)
+        .animation(reduceMotion ? nil : Motion.microInteraction, value: isPlaying)
         .accessibilityLabel(isPlaying ? "Pause" : "Play")
     }
 }

@@ -29,10 +29,6 @@ struct LyricsView: View {
         [.plainText, UTType(filenameExtension: "lrc") ?? .plainText, UTType(filenameExtension: "ttml") ?? .xml]
     }
 
-    private var lineAnimation: Animation? {
-        reduceMotion ? nil : Animation.interpolatingSpring(stiffness: 118, damping: 18)
-    }
-
     private var sourceBadge: String {
         guard let lyrics = trackLyrics else { return store.isLoading ? "Looking up lyrics…" : "No lyrics found" }
         switch lyrics.source {
@@ -242,11 +238,11 @@ struct LyricsView: View {
                 })
                 .onChange(of: state.scrollID) { _, id in
                     guard !autoScrollPaused, let id else { return }
-                    withAnimation(reduceMotion ? nil : Motion.sheet) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
+                    withAnimation(reduceMotion ? nil : Motion.transition) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
                 }
                 .onChange(of: autoScrollPaused) { _, paused in
                     guard !paused, let id = state.scrollID else { return }
-                    withAnimation(reduceMotion ? nil : Motion.sheet) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
+                    withAnimation(reduceMotion ? nil : Motion.transition) { proxy.scrollTo(id, anchor: Self.scrollAnchor) }
                 }
                 .mask(edgeFade(height: geo.size.height))
             }
@@ -291,8 +287,8 @@ struct LyricsView: View {
         .scaleEffect(isSinging || reduceMotion ? 1 : 0.97, anchor: .leading)
         .opacity(opacity)
         .blur(radius: blurRadius)
-        .animation(lineAnimation, value: state.focusIndex)
-        .animation(lineAnimation, value: isSinging)
+        .animation(Motion.microInteraction, value: state.focusIndex)
+        .animation(Motion.microInteraction, value: isSinging)
         .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
         .contentShape(Rectangle())
         .onTapGesture { player.seek(to: line.start) }
@@ -543,7 +539,7 @@ private struct InterludeDots: View {
         }
         .padding(.vertical, 14)
         .opacity(isVisible ? (time > end - 0.3 ? max(0, (end - time) / 0.3) : 1) : 0.15)
-        .animation(.easeInOut(duration: 0.3), value: isVisible)
+        .animation(Motion.crossfade, value: isVisible)
         .drawingGroup()
     }
 }
@@ -603,7 +599,7 @@ private struct SyncedLyricWord: View {
         .fixedSize(horizontal: true, vertical: false)
         .scaleEffect(longWordScale, anchor: .bottomLeading)
         .offset(y: isCurrent ? -1.5 : 0)
-        .animation(.easeInOut(duration: 0.22), value: isCurrent)
+        .animation(Motion.crossfade, value: isCurrent)
         .drawingGroup()
     }
 }

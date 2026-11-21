@@ -194,7 +194,7 @@ private struct QueueRow: View {
             }
         }
         .buttonStyle(MusicPressStyle())
-        .animation(reduceMotion ? nil : Motion.snappy, value: isCurrent)
+        .animation(reduceMotion ? nil : Motion.microInteraction, value: isCurrent)
         .accessibilityLabel("\(item.title ?? "Untitled"), \(item.artist ?? "Unknown artist")")
         .accessibilityHint(isCurrent ? "Currently playing" : "Play this track")
     }
