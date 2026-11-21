@@ -40,5 +40,6 @@ struct WaveformView: View {
         }
         .frame(height: 32)
         .transaction { transaction in transaction.animation = nil }
+        .animation(Motion.drag, value: preview == nil)
     }
 }

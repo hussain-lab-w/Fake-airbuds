@@ -8,6 +8,9 @@ struct NowPlayingFullView: View {
     @State private var showLyrics = false
     @State private var showQueue = false
     @State private var artworkMotion = false
+    /// Tracks drag-to-dismiss offset so the finger moves the sheet 1:1 and it
+    /// settles back with Motion.drag on release instead of snapping.
+    @State private var dismissDragOffset: CGSize = .zero
 
     var body: some View {
         GeometryReader { geometry in
@@ -70,20 +73,29 @@ struct NowPlayingFullView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .offset(dismissDragOffset)
+            .animation(Motion.drag, value: dismissDragOffset == .zero)
             .sheet(isPresented: $showQueue) { QueueView(player: player) }
             .background { background }
             .onAppear { startArtworkMotion() }
             .onChange(of: reduceMotion) { _, reduced in
                 if reduced { artworkMotion = false } else { startArtworkMotion() }
             }
-                .gesture(DragGesture().onEnded { value in
-            guard !showLyrics else { return }
-            if value.translation.height > 120 {
-                dismiss()
-            } else if abs(value.translation.width) > 100 {
-                value.translation.width < 0 ? player.nextTrack() : player.previousTrack()
-            }
-        })
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        dismissDragOffset = CGSize(width: 0, height: value.translation.height)
+                    }
+                    .onEnded { value in
+                        defer { dismissDragOffset = .zero }
+                        guard !showLyrics else { return }
+                        if value.translation.height > 120 {
+                            dismiss()
+                        } else if abs(value.translation.width) > 100 {
+                            value.translation.width < 0 ? player.nextTrack() : player.previousTrack()
+                        }
+                    }
+            )
 
         }
     }

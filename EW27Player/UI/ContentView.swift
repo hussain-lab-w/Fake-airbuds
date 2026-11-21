@@ -1123,7 +1123,7 @@ private struct SlimPlaybackProgressBar: View {
                     .frame(width: knob, height: knob)
                     .shadow(color: .black.opacity(0.28), radius: 4, y: 1)
                     .offset(x: max(0, width * CGFloat(progress) - knob / 2))
-                    .animation(Motion.microInteraction, value: scrubFraction == nil)
+                    .animation(Motion.drag, value: scrubFraction == nil)
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
