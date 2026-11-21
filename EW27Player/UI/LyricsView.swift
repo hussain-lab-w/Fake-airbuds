@@ -637,7 +637,7 @@ private struct LyricsTransportBar: View {
                         }
                         .onEnded { value in
                             let target = min(1, max(0, value.location.x / max(1, geo.size.width)))
-                            player.seek(to: target * duration)
+                            player.seek(to: target * clock.duration)
                             scrubFraction = nil
                         }
                 )
