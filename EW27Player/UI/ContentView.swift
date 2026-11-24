@@ -55,17 +55,17 @@ struct ContentView: View {
             }
             .id(selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .transition(.opacity)
+            .transition(Motion.fade)
 
             if player.currentItem != nil && selectedTab != .player && dockVisible {
                 miniPlayer
                     .padding(.horizontal, 14)
                     .padding(.top, 7)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(Motion.slide)
             }
             if dockVisible {
                 appTabDock
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(Motion.slide)
             }
         }
         .onPreferenceChange(DockScrollOffsetKey.self) { offset in
@@ -111,7 +111,7 @@ struct ContentView: View {
                             .font(.system(size: 17, weight: .semibold))
                             .symbolEffect(.bounce, value: reduceMotion ? 0 : (selected ? 1 : 0))
                         if selected {
-                            Text(item.title).font(.caption.weight(.bold)).transition(.opacity.combined(with: .scale(scale: 0.86)))
+                            Text(item.title).font(.caption.weight(.bold)).transition(.opacity.combined(with: .scale(scale: 0.86)).animation(Motion.microInteraction))
                         }
                     }
                     .foregroundStyle(selected ? EW27Design.accent : EW27Design.secondaryText)
@@ -175,11 +175,12 @@ struct ContentView: View {
     }
 
     private func lyricsTransition(edge: Edge) -> AnyTransition {
-        guard !reduceMotion else { return .opacity }
+        guard !reduceMotion else { return .opacity.animation(Motion.crossfade) }
         return .asymmetric(
             insertion: .opacity.combined(with: .scale(scale: 0.975)),
             removal: .opacity.combined(with: .scale(scale: 1.02))
         )
+        .animation(Motion.transition)
     }
 
     private func setLyricsVisible(_ visible: Bool) {
@@ -601,7 +602,7 @@ struct ContentView: View {
         .drawingGroup()
         .scaleEffect(!reduceMotion && player.isPlaying && albumArtMotion ? 1.012 : 1)
         .id(player.currentItem?.persistentID)
-        .transition(.opacity)
+        .transition(Motion.fade)
         .animation(reduceMotion ? nil : Motion.crossfade, value: player.currentItem?.persistentID)
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {

@@ -31,7 +31,7 @@ struct RouteAccessoryCard: View {
                 .liquidGlass(prominent: true, tint: EW27Design.accent.opacity(0.18))
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(Motion.slideTop)
             }
         }
         .onChange(of: routeName) { _, newValue in showRoute(newValue) }

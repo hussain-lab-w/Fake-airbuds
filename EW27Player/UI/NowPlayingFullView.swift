@@ -49,7 +49,7 @@ struct NowPlayingFullView: View {
                 if showLyrics {
                     LyricsView(player: player, store: player.lyricsStore)
                     .frame(width: geometry.size.width, height: max(0, geometry.size.height - 69))
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(Motion.slide)
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
@@ -69,7 +69,7 @@ struct NowPlayingFullView: View {
                         .padding(.bottom, 30)
                     }
                     .clipped()
-                    .transition(.opacity)
+                    .transition(Motion.fade)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

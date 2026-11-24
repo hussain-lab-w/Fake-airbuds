@@ -66,7 +66,7 @@ struct LyricsView: View {
                 LyricsTransportBar(player: player, clock: player.clock)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 10)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(Motion.slide)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -289,7 +289,7 @@ struct LyricsView: View {
         .blur(radius: blurRadius)
         .animation(Motion.microInteraction, value: state.focusIndex)
         .animation(Motion.microInteraction, value: isSinging)
-        .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
+        .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity).animation(Motion.microInteraction))
         .contentShape(Rectangle())
         .onTapGesture { player.seek(to: line.start) }
         .contextMenu {
@@ -336,7 +336,7 @@ struct LyricsView: View {
             }
             .buttonStyle(.plain)
             .padding(.bottom, showTransportBar ? 140 : 28)
-            .transition(.opacity)
+            .transition(Motion.fade)
         }
     }
 

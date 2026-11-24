@@ -6,6 +6,9 @@ enum Motion {
     static let transition = Animation.spring(response: 0.42, dampingFraction: 0.84)          // sheets, screen/tab changes, expand/collapse
     static let drag = Animation.interactiveSpring(response: 0.3, dampingFraction: 0.82, blendDuration: 0.1) // anything tracking a gesture
     static let crossfade = Animation.easeInOut(duration: 0.25)                                // opacity/color only
+    static let fade = AnyTransition.opacity.animation(Motion.crossfade)                         // crossfade transitions (opacity only)
+    static let slide = AnyTransition.move(edge: .bottom).combined(with: .opacity).animation(Motion.transition) // sheets/screen slides (from bottom)
+    static let slideTop = AnyTransition.move(edge: .top).combined(with: .opacity).animation(Motion.transition) // accessory cards (from top)
 }
 
 enum EW27Appearance: String, CaseIterable, Identifiable {
@@ -195,7 +198,7 @@ struct ArtworkAuroraBackground: View {
                         .offset(x: drift ? 12 : -10, y: drift ? -8 : 10)
                         .blur(radius: 38)
                         .opacity(colorScheme == .dark ? 0.55 : 0.42)
-                        .transition(.opacity)
+                        .transition(Motion.fade)
                 }
                 Circle().fill(accent.opacity(colorScheme == .dark ? 0.42 : 0.26)).frame(width: 340, height: 340).blur(radius: 84)
                     .allowsHitTesting(false)
