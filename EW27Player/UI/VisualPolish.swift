@@ -2,9 +2,9 @@ import SwiftUI
 import UIKit
 
 enum Motion {
-    static let microInteraction = Animation.spring(response: 0.28, dampingFraction: 0.86)   // taps, toggles, selection
-    static let transition = Animation.spring(response: 0.42, dampingFraction: 0.84)          // sheets, screen/tab changes, expand/collapse
-    static let drag = Animation.interactiveSpring(response: 0.3, dampingFraction: 0.82, blendDuration: 0.1) // anything tracking a gesture
+    static let microInteraction = Animation.spring(response: 0.30, dampingFraction: 1.00)   // taps, toggles, selection — critically damped, no bounce
+    static let transition = Animation.spring(response: 0.45, dampingFraction: 1.00)         // sheets, screen/tab changes — critically damped, ~0.45s
+    static let drag = Animation.interactiveSpring(response: 0.30, dampingFraction: 0.95, blendDuration: 0.1) // anything tracking a gesture
     static let crossfade = Animation.easeInOut(duration: 0.25)                                // opacity/color only
     static let fade = AnyTransition.opacity.animation(Motion.crossfade)                         // crossfade transitions (opacity only)
     static let slide = AnyTransition.move(edge: .bottom).combined(with: .opacity).animation(Motion.transition) // sheets/screen slides (from bottom)
@@ -70,6 +70,13 @@ enum EW27Design {
     static let separator = Color(uiColor: .separator)
     static let cyan = Color(uiColor: .systemCyan)
     static let accent = Color(uiColor: .systemBlue)
+
+    // Apple Music-inspired dark surface tones (BitChord design language),
+    // used where the player paints its own canvas instead of system chrome.
+    static let surfaceDark   = Color(red: 0.051, green: 0.051, blue: 0.059) // #0D0D0F
+    static let surfaceVariantDark = Color(red: 0.110, green: 0.110, blue: 0.118) // #1C1C1E
+    static let outlineDark   = Color(red: 0.173, green: 0.173, blue: 0.180) // #2C2C2E
+    static let accentRed     = Color(red: 0.980, green: 0.176, blue: 0.282)  // #FA2D48
 }
 
 struct EW27CardModifier: ViewModifier {
@@ -255,14 +262,14 @@ struct GlassPanel<Content: View>: View {
 
 /// One typographic scale, so every screen speaks with the same voice.
 enum EW27Type {
-    static let hero = Font.system(size: 23, weight: .bold, design: .rounded)
-    static let title = Font.headline
-    static let row = Font.caption.weight(.semibold)
-    static let body = Font.subheadline
-    static let caption = Font.caption2
-    static let chip = Font.caption2.weight(.semibold)
-    static let numeric = Font.caption.monospacedDigit().weight(.semibold)
-    static let label = Font.caption.weight(.bold)
+    static let hero = Font.custom("SF Pro Display", size: 23).weight(.bold)
+    static let title = Font.custom("SF Pro Display", size: 20).weight(.semibold)
+    static let row = Font.custom("SF Pro Text", size: 13).weight(.semibold)
+    static let body = Font.custom("SF Pro Text", size: 16).weight(.regular)
+    static let caption = Font.custom("SF Pro Text", size: 11).weight(.regular)
+    static let chip = Font.custom("SF Pro Text", size: 11).weight(.semibold)
+    static let numeric = Font.custom("SF Pro Text", size: 11).weight(.semibold).monospacedDigit()
+    static let label = Font.custom("SF Pro Text", size: 11).weight(.bold)
 }
 
 enum EW27Radius {
